@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>INI Search</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+		b {
+			color: #ffa;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+
+
+		#id-search {
+			width: 100%;
+			margin-bottom: 1rem;
+			background: #ccc;
+			border: 0;
+			padding: 0.5rem 1rem;
+			border-radius: 0.5rem;
+			box-sizing: border-box;
+		}
+
+
+		#id-table {
+			width: 100%;
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<input id="id-search" placeholder="search"></input>
+
+	<table id="id-table">
+		<tbody id="id-table-body"></tbody>
+	</table>
+
+	<script>
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const idSearch = document.getElementById("id-search");
+		const idTable = document.getElementById("id-table-body");
+		let usedIds = [];
+		/** @type {{
+		 * name: string;
+		 * path: string;
+		 * size: number;
+		 * text: string;
+		 * }[]} */
+		let allFiles = [];
+
+
+		let dropArea = document;
+		// dropArea.addEventListener('dragenter', handlerFunction, false)
+		// dropArea.addEventListener('dragleave', handlerFunction, false)
+		// dropArea.addEventListener('dragover', handlerFunction, false)
+		// dropArea.addEventListener('drop', handlerFunction, false)
+		idSearch.addEventListener("input", () => {
+			updateFilesToIdList();
+		});
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			console.log(event);
+			event.preventDefault();
+    		event.stopPropagation();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			folderUpload.classList.remove("active");
+
+			let waitingList = [];
+			for (var i=0; i<items.length; i++) {
+				// webkitGetAsEntry is where the magic happens
+				var item = items[i].webkitGetAsEntry();
+				if (item) {
+					let result = traverseFileTree(item);
+					waitingList.push(result);
+				}
+			}
+			// await Promise.all(waitingList);
+
+			// updateFilesToIdList();
+		}, false);
+		
+		async function traverseFileTree(item, path) {
+			path = path || "";
+			if (item.isFile) {
+				// Get file
+				item.file(function(file) {
+					// console.log("File:", path + file.name);
+					if (file.name.toLowerCase().endsWith(".ini")) addFileToIdList(path, file);
+					// if (path.split("/").slice(1).join("/").toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			} else if (item.isDirectory) {
+				// Get folder contents
+				var dirReader = item.createReader();
+				return new Promise((resolve, reject) => {
+					dirReader.readEntries(async function(entries) {
+						let waitingList = [];
+						for (var i=0; i<entries.length; i++) {
+							let result = traverseFileTree(entries[i], path + item.name + "/");
+							waitingList.push(result);
+						}
+						// await Promise.all(waitingList);
+						resolve();
+					});
+				});
+			}
+		}
+
+		function addFileToIdList(path, file) {
+			console.log("File:", file.name);
+			let newFileObj = {
+				name: file.name,
+				path,
+				size: file.size,
+				text: file.text(),
+			};
+			allFiles.push(newFileObj);
+
+			newFileObj.text.then(x => newFileObj.text = x).then(updateFilesToIdList);
+		}
+		function updateFilesToIdList() {
+			if (idSearch.value == "") return;
+			if (allFiles.filter(x => x.text instanceof Promise).length > 0) return;
+			idTable.innerHTML = `
+				<tr>
+					<th>line number</th>
+					<th>line</th>
+					<th>file</th>
+				</tr>
+			`;
+			// await Promise.all(allFiles.map(x => x.text)).then(promiseResults => {
+			// 	allFiles.forEach((x,xi) => {
+			// 		x.text = promiseResults[xi];
+			// 	});
+			// });
+
+			let completedFiles = 0;
+			let searchField = idSearch.value;
+			let wholeTable = ``;
+			allFiles.forEach((file, filei) => {
+				// setTimeout((file) => {
+					if (file.text == null) console.log(file);
+					let foundlines = file.text.toLowerCase().split(searchField.toLowerCase());
+					completedFiles++;
+					console.log("loading file", completedFiles, "out of", allFiles.length);
+					if (foundlines.length == 1) return;
+					let charsRead = 0;
+					foundlines.forEach((x,xi) => {
+						if (foundlines.length == xi + 1) return;
+
+						charsRead += x.length + searchField.length;
+						if (xi != 0) charsRead -= x.split("\n")[0].length;
+						if (foundlines.length !== xi + 1) charsRead += foundlines[xi+1].split("\n")[0].length;
+
+						let allLinesTillThis = file.text.slice(0, charsRead).split("\n");
+						let currentLine = allLinesTillThis.slice(-1)[0];
+						let lineChar = currentLine.toLowerCase().indexOf(searchField.toLowerCase());
+						let tabelElement = `
+							<tr>
+								<td>${parseInt(allLinesTillThis.length)}</td>
+								<td>${escapeHTML(currentLine.slice(0, lineChar)) + "<b>" + escapeHTML(currentLine.slice(lineChar, lineChar+searchField.length)) + "</b>" + escapeHTML(currentLine.slice(lineChar+searchField.length))}</td>
+								<td>${escapeHTML(file.path + file.name)}</td>
+							</tr>
+						`;
+						wholeTable += tabelElement;
+						// idTable.innerHTML += tabelElement;
+					})
+				// }, filei+1, filee);
+			});
+
+			console.log("DONE");
+			idTable.innerHTML += wholeTable;
+		}
+
+
+		function escapeHTML(...text) {
+			let temp = document.createElement('div');
+			temp.textContent = text.join('');
+			let result = temp.innerHTML;
+			temp.remove();
+			return result;
+		}
+	</script>
+</body>
+</html>

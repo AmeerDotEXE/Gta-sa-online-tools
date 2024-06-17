@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+		}
+		body {
+			display: flex;
+			flex-direction: column;
+		}
+		textarea {
+			height: 100%;
+		}
+	</style>
+</head>
+<body>
+	<textarea id="cleo-log" placeholder="moadloader.log goes here..."></textarea>
+	<textarea id="modloader-cleo" readonly placeholder="cleo mods folder name shows here..."></textarea>
+	
+	<script>
+		let result = document.getElementById("modloader-cleo");
+		document.getElementById("cleo-log").addEventListener("input", (e) => {
+			let element = e.target;
+			let loadedScripts = [];
+
+			element.value
+				.split(`Injecting cleo script "modloader\\`)
+				.slice(1)
+				.map(x => x.split("\\")[0])
+				.forEach(x => {
+					if (loadedScripts.includes(x)) return;
+					loadedScripts.push(x);
+				});
+
+			result.value = loadedScripts.join("\n");
+		});
+	</script>
+</body>
+</html>

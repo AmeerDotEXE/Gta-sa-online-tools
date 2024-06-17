@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<!-- its better if i saparate it into different files but im just lazy to do so -->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Veh Manager</title>
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    		letter-spacing: 0.25px;
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+
+		.section {
+			margin-top: 1rem;
+		}
+		.input {
+			padding: 0.5rem 1rem;
+			border-radius: 8px;
+			background-color: rgba(128, 128, 128, 0.2);
+			border: 0;
+			color: #ddd;
+		}
+		.input:hover {
+			background-color: rgba(128, 128, 128, 0.1);
+		}
+		.input:focus, .input:focus-visible, .input:focus-within {
+			outline: 1px solid #66f;
+			outline-offset: 0px;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+
+		table {
+			width: 100%;
+		}
+		td, th {
+			padding: 0.5rem;
+			border-radius: 8px;
+			background-color: rgba(128, 128, 128, 0.2);
+		}
+		tbody {
+			font-family: monospace;
+		}
+
+		td:first-child {
+			text-align: center;
+		}
+		td.missing {
+			background-color: rgba(128, 0, 0, 0.2);
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<div id="id-status"></div>
+
+
+	<div class="section">
+		<h3>Actions</h3>
+		<div>
+			<button class="input" onclick="generateCheatMenu()">Generate Cheat Menu</button>
+		</div>
+	</div>
+	<div class="section" hidden>
+		<h3>Filters</h3>
+		<div>
+			<input class="input" placeholder="Search...">
+			<!-- filters -->
+				<!-- with errors -->
+				<!-- missing files -->
+				<!-- missing lines -->
+				<!-- ids enabled: yes/natural/no -->
+				<!-- has tuning: yes/natural/no -->
+		</div>
+	</div>
+	<table class="section" id="id-table"></table>
+
+	<script>
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const idStatus = document.getElementById("id-status");
+		const idTable = document.getElementById("id-table");
+
+		const gameGxt = "LANDSTK Landstalker\nBRAVURA Bravura\nBUFFALO Buffalo\nLINERUN Linerunner\nPEREN Perennial\nSENTINL Sentinel\nINFERNU Infernus\nDUMPER Dumper\nFIRETRK Fire Truck\nTRASHM Trashmaster\nSTRETCH Stretch\nMANANA Manana\nVOODOO Voodoo\nPONY Pony\nMULE Mule\nCHEETAH Cheetah\nAMBULAN Ambulance\nLEVIATH Leviathan\nHUNTER Hunter\nMOONBM Moonbeam\nESPERAN Esperanto\nTAXI Taxi\nWASHING Washington\nBOBCAT Bobcat\nWHOOPEE Mr. Whoopee\nBFINJC BF Injection\nPOLICAR Police\nENFORCR Enforcer\nSECURI Securicar\nBANSHEE Banshee\nPREDATR Predator\nBUS Bus\nRHINO Rhino\nBARRCKS Barracks\nHOTKNIF Hotknife\nHELI Chopper\nPREVION Previon\nCOACH Coach\nCABBIE Cabbie\nSTALION Stallion\nRUMPO Rumpo\nRCBANDT RC Bandit\nROMERO Romero\nPACKER Packer\nMONSTER Monster\nADMIRAL Admiral\nSQUALO Squalo\nSEASPAR Seasparrow\nPIZZABO Pizzaboy\nTRAM Tram\nAEROPL Air Train\nDODO Dodo\nSPEEDER Speeder\nREEFER Reefer\nTROPIC Tropic\nFLATBED Flatbed\nYANKEE Yankee\nCADDY Caddy\nSOLAIR Solair\nTOPFUN Berkley's RC Van\nSKIMMER Skimmer\nPCJ600 PCJ-600\nFAGGIO Faggio\nFREEWAY Freeway\nRCBARON RC Baron\nRCRAIDE RC Raider\nGLENDAL Glendale\nOCEANIC Oceanic\nSANCHEZ Sanchez\nSPARROW Sparrow\nPATRIOT Patriot\nQUAD Quadbike\nCOASTG Coastguard\nDINGHY Dinghy\nHERMES Hermes\nSABRE Sabre\nMUSTANG Mustang\nZR350 ZR-350\nWALTON Walton\nREGINA Regina\nCOMET Comet\nBMX BMX\nBURRITO Burrito\nCAMPER Camper\nMARQUIS Marquis\nBAGGAGE Baggage\nDOZER Dozer\nMAVERIC Maverick\nSANMAV News Chopper\nRANCHER Rancher\nFBIRANC FBI Rancher\nVIRGO Virgo\nGREENWO Greenwood\nJETMAX Jetmax\nHOTRING Hotring Racer\nSANDKIN Sandking\nBLISTAC Blista Compact\nPOLMAV Police Maverick\nBOXBURG Boxville\nBOXVILL Boxville\nBENSON Benson\nMESAA Mesa\nRCGOBLI RC Goblin\nHOTRINA Hotring Racer\nHOTRINB Hotring Racer\nBLOODRA Bloodring Banger\nBLOODRB Bloodring Banger\nSUPERGT Super GT\nELEGANT Elegant\nJOURNEY Journey\nBIKE Bike\nMTBIKE Mountain Bike\nBEAGLE Beagle\nCROPDST Cropduster\nSTUNT Stuntplane\nPETROL Tanker\nRDTRAIN Roadtrain\nNEBULA Nebula\nMAJESTC Majestic\nBUCCANE Buccaneer\nLEARJET Learjet\nHARRIER Harrier\nFCR900 FCR-900\nNRG500 NRG-500\nHPV1000 HPV1000\nCEMENT Cement Truck\nTOWTRUK Towtruck\nFORTUNE Fortune\nCADRONA Cadrona\nFBITRUK FBI Truck\nWILLARD Willard\nFORKLFT Forklift\nTRACTOR Tractor\nCOMBINE Combine Harvester\nFELTZER Feltzer\nREMING Remington\nSLAMVAN Slamvan\nBLADE Blade\nFREIGHT Freight\nSTREAK Brown Streak\nVORTEX Vortex\nVINCENT Vincent\nBULLET Bullet\nCLOVER Clover\nSADLER Sadler\nRANGER Ranger\nHUSTLER Hustler\nINTRUDR Intruder\nPRIMO Primo\nCARGOBB Cargobob\nTAMPA Tampa\nSUNRISE Sunrise\nMERIT Merit\nUTILITY Utility Van\nNEVADA Nevada\nYOSEMIT Yosemite\nWINDSOR Windsor\nMONSTA Monster\nMONSTB Monster\nURANUS Uranus\nJESTER Jester\nSULTAN Sultan\nFLAME Flame\nSTRATUM Stratum\nELEGY Elegy\nRAINDNC Raindance\nRCTIGER RC Tiger\nFLASH Flash\nTAHOMA Tahoma\nSAVANNA Savanna\nBANDITO Bandito\nFRFLAT Freight\nSTREAKC Brown Streak\nKART Kart\nMOWER Mower\nDUNE Dune\nSWEEPER Sweeper\nBROADWY Broadway\nTORNADO Tornado\nAT400 AT-400\nDFT30 DFT-30\nHUNTLEY Huntley\nSTAFFRD Stafford\nBF400 BF-400\nNEWSVAN Newsvan\nTUG Tug\nPETROTR Petrol Truck\nEMPEROR Emperor\nWAYFARE Wayfarer\nFLOAT1 Float\nHOTDOG Hotdog\nCLUB Club\nFREIBOX Freight Box\nROLLER Roller\nANDROM Andromada\nRCCAM RC Cam\nLAUNCH Launch\nTURISMO Turismo\nPICADOR Picador\nSWATVAN S.W.A.T.\nALPHA Alpha\nPHOENIX Phoenix\nGLENSHI Glendale\nEUROS Euros\nPREMIER Premier\nRUSTLER Rustler\nSHAMAL Shamal\nHYDRA Hydra\nFIRELA Fire Truck\nSADLSHI Sadler\n";
+		const ideFormatRX = /^(\d+)(?:,| |\t)(?: |\t)*(\S+)(?:,| |\t)(?: |\t)*(\S+)(?:,| |\t)/gm;
+		const vehicleIdeRx = /^#?(\d+),?\s*(\S+),?\s*(\S+),?\s*(car|mtruck|quad|heli|f_heli|plane|f_plane|boat|train|bike|bmx|trailer),?\s*(\S+),?\s*(\S+),?\s*(\S+),?\s*(normal|special|poorfamily|richfamily|executive|worker|big|taxi|moped|motorbike|leisureboat|workerboat|bicycle|ignore),?\s*\d+,?\s*\d+,?\s*(\d+x*\d*f*\d*),?\t* *\t*(-?\d+)?,?\t* *(\d+\.?\d*)?,?\t* *(\d+\.?\d*)?,?\t* *(-?\d+)?\t* *$/gm;
+		const handlingRx = /^([a-zA-Z0-9_]+)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-Z])(?:\t| )+([0-9A-Z])(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-Z])(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-fa-f]+)(?:\t| )+([0-9A-fa-f]+)(?:\t| )+([0-9A-Z])(?:\t| )+([0-9A-Z])(?:\t| )+(\d+)(?:\t| )*$/gm;
+		const fxtFormatRX = /^([a-zA-Z0-9]+) (.+)$/gm;
+		const vehicleAudioRX = /^([0-9a-zA-Z]+)(?: |\t)+(\d+)(?: |\t)+(-?\d+)(?: |\t)+(-?\d+)(?: |\t)+(\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)+(\d+\.?\d*)(?: |\t)+(-?\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)+(-?\d+)(?: |\t)+(\d+)(?: |\t)+(\d+)(?: |\t)+(-?\d+)(?: |\t)+(-?\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)*$/gm;
+		const carcolsRX = /^(\w+),\s*((?:(?: |\t|,)*\d+)+),?(?: |\t)*$/gm;
+		const carmodsRX = /^(\w+),?(?:(?:,| |\t)+(?:hydralics|stereo|nto_\w+|bnt_\w+|chss_\w+|exh_\w+|bntl_\w+|bntr_\w+|spl_\w+|wg_l_\w+|wg_r_\w+|fbb_\w+|bbb_\w+|lgt_\w+|rf_\w+|fbmp_\w+|rbmp_\w+|misc_a_\w+|misc_b_\w+|misc_c_\w+))+(?: |\t)*$/gm;
+		const carmodsUpgrades = ["nto_","bnt_","chss_","exh_","bntl_","bntr_","spl_","wg_l_","wg_r_","fbb_","bbb_","lgt_","rf_","fbmp_","rbmp_","misc_a_","misc_b_","misc_c_"]
+		const vehicleTypeIcons = {
+			car: `<i class="fa-solid fa-car-side"></i>`,
+			mtruck: `<i class="fa-solid fa-truck-monster"></i>`,
+			heli: `<i class="fa-solid fa-helicopter"></i>`,
+			boat: `<i class="fa-solid fa-sailboat"></i>`,
+			trailer: `<i class="fa-solid fa-trailer"></i>`,
+			bike: `<i class="fa-solid fa-bicycle"></i>`,
+			quad: `<i class="fa-solid fa-bicycle"></i>`,
+			bmx: `<i class="fa-solid fa-bicycle"></i>`,
+			train: `<i class="fa-solid fa-train"></i>`,
+			plane: `<i class="fa-solid fa-plane"></i>`,
+		}
+
+
+		/** @typedef {{
+		 * id: number;
+		 * type: "car"|"mtruck"|"heli"|"boat"|"trailer"|"bike"|"quad"|"bmx"|"train"|"plane";
+		 * name: string;
+		 * gameName: string;
+		 * isDisabled: boolean;
+		 * fxtTag: string;
+		 * handlingTag: string;
+		 * lines: {
+		 * 		ide: string;
+		 * 		handling: string;
+		 * 		audio: string;
+		 * 		carmods: string;
+		 * 		carcols: string;
+		 * };
+		 * filePaths: {
+		 * 		ide: string;
+		 * 		dff: string;
+		 * 		txd: string;
+		 * 		handling: string;
+		 * 		carmods: string;
+		 * 		carcols: string;
+		 * 		fxt: string;
+		 * };
+		 * }} Vehicle */
+		const VehicleUpdate = {
+			tags() {
+				vehiclesList.filter(veh => veh.gameName == null).forEach(veh => {
+					let fxtData = fxtTags[veh.fxtTag];
+					if (!fxtData) return;
+
+					veh.gameName = fxtData.text;
+					veh.filePaths.fxt = fxtData.fullPath;
+				});
+			},
+			handlings() {
+				vehiclesList.filter(veh => veh.lines.handling == null).forEach(veh => {
+					let handlingLine = handlingTags[veh.handlingTag];
+					if (!handlingLine) return;
+
+					veh.lines.handling = handlingLine.line;
+					veh.filePaths.handling = handlingLine.fullPath;
+				});
+			},
+			carcols() {
+				vehiclesList.filter(veh => veh.lines.carcols == null).forEach(veh => {
+					let carcolsLine = carcolsLines[veh.name];
+					if (!carcolsLine) return;
+
+					veh.lines.carcols = carcolsLine.line;
+					veh.filePaths.carcols = carcolsLine.fullPath;
+				});
+			},
+			carmods() {
+				vehiclesList.filter(veh => veh.lines.carmods == null).forEach(veh => {
+					let carmodsLine = carmodsLines[veh.name];
+					if (!carmodsLine) return;
+
+					veh.lines.carmods = carmodsLine.line;
+					veh.filePaths.carmods = carmodsLine.fullPath;
+				});
+			},
+			audio() {
+				vehiclesList.filter(veh => veh.lines.audio == null).forEach(veh => {
+					let audioLine = vehicleAudio[veh.name];
+					if (!audioLine) return;
+
+					veh.lines.audio = audioLine;
+				});
+			},
+		};
+
+		/** @type {Vehicle[]} */
+		let vehiclesList = [];
+
+		let fileCount = 0;
+		let filesLoading = 0;
+		let files = {};
+
+		let ideFiles = [];
+		let handlingFiles = [];
+		let carcolsFiles = [];
+		let carmodsFiles = [];
+		let fxtFiles = [];
+		let fastman92AudioFile = null;
+
+		let handlingTags = {};
+		let fxtTags = {};
+		let vehicleAudio = {};
+		let carcolsLines = {};
+		let carmodsLines = {};
+
+		/**
+		 * @type {{
+		 * 		id: Number;
+		 * 		name: String;
+		 * 		fullPath: String;
+		 * }}
+		*/
+		let idList = [];
+
+		//load gxt file as fxt format (manual process)
+		gameGxt.match(fxtFormatRX).forEach(line => {
+			let tag = line.split(" ")[0];
+			let text = line.split(" ").slice(1).join(" ").trim();
+
+			fxtTags[tag] = {
+				text,
+				fullPath: "text/american.gxt", // american.gxt if english
+			};
+		});
+
+		//area where it would detect game files being dropped
+		let dropArea = document;
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			event.preventDefault();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			for (var i=0; i<items.length; i++) {
+				var item = items[i].webkitGetAsEntry();
+				if (!item) continue;
+
+				if (item.isFile) fileCount++;
+				traverseFileTree(item);
+			}
+
+			// updateFilesToIdList();
+		}, false);
+
+		/**
+		 * @param {FileSystemEntry} item
+		 * @param {String} path
+		*/
+		async function traverseFileTree(_item, path) {
+			path = path || "";
+			if (_item.isFile == _item.isDirectory) {
+				throw Error("weird file: "+path+" "+item.name);
+			}
+
+			if (_item.isFile) {
+				/** @type {FileSystemFileEntry} */
+				let item = _item;
+
+				// Get file
+				item.file(function(file) {
+					// console.log(path, "File:", path + file.name, file);
+					addFileToFilesList(path, file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			}
+
+			/** @type {FileSystemDirectoryEntry} */
+			let item = _item;
+
+			// Get folder contents
+			var dirReader = item.createReader();
+			const enteriesReader = async () => {
+				await new Promise((resolve, reject) => {
+					dirReader.readEntries(async function(entries) {
+						fileCount += entries.filter((x) => x.isFile).length;
+
+						let isGameFolder = entries.find((x) => x.name.toLowerCase() == "vorbis.dll" && x.isFile) != null;
+						let itemName = item.name + "/";
+						if (isGameFolder) itemName = "";
+						// console.log(item, path, isGameFolder);
+
+						for (var i=0; i < entries.length; i++) {
+							traverseFileTree(entries[i], path + itemName);
+						}
+
+						//reads 100 more
+						if (entries.length >= 99) await enteriesReader();
+
+						resolve();
+					});
+				});
+			};
+			return enteriesReader();
+		}
+		
+		/**
+		 * @param {string} path
+		 * @param {File} file
+		*/
+		async function addFileToFilesList(path, file) {
+			let newFile = {
+				name: file.name,
+				path,
+				fullPath: path+file.name,
+				file,
+			};
+			files[newFile.fullPath] = newFile;
+
+			// ide file
+			if (file.name.toLowerCase().endsWith(".ide")) checkFileIde(newFile);
+			if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) checkFileIde(newFile);
+
+			// audio file
+			if (file.name == "gtasa_vehicleAudioSettings.cfg") checkFileVehAudio(newFile);
+
+			// fxt file
+			if (file.name.toLowerCase().endsWith(".fxt")) checkFileFxt(newFile);
+
+			// handling file
+			if (file.name.toLowerCase() == "handling.cfg") checkFileHanding(newFile);
+			if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) checkFileHanding(newFile);
+
+			// carcols file
+			if (file.name.toLowerCase() == "carcols.dat") checkFileCarcols(newFile);
+			if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) checkFileCarcols(newFile);
+
+			// carmods file
+			if (file.name.toLowerCase() == "carmods.dat") checkFileCarMods(newFile);
+			if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) checkFileCarMods(newFile);
+		}
+
+		async function waitFileObjLoad(fileObj) {
+			if (fileObj.text instanceof Promise) await fileObj.text;
+			if (fileObj.isLoaded == true) return;
+			fileObj.text = fileObj.file.text();
+
+			filesLoading++;
+			await fileObj.text
+			.then(x => {
+				fileObj.text = x;
+				fileObj.isLoaded = true;
+				filesLoading--;
+			})
+			.then(updateFilesToIdList);
+		}
+
+		async function checkFileIde(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			//register id in idList
+			if (ideFormatRX.test(fileObj.text)) {
+				fileObj.text.match(ideFormatRX).forEach(idLine => {
+					let idLineComponents = idLine.split(ideFormatRX).slice(1,-1);
+					if (idLineComponents[0] == '00') return;
+
+					let id = parseInt(idLineComponents[0]);
+					let name = idLineComponents[1];
+
+					if (name.endsWith(",")) name = name.slice(0, -1);
+					if (!isNaN(parseFloat(name)) && (parseFloat(name)+"") == name) return;
+
+					let idConflicts = idList.filter(x => x.id == id && x.name != name && (id < 16700 || id > 16708));
+					if (idConflicts.length > 0) idConflicts.map(x => console.log(x.id+": "+x.name+" to "+name+"\n"+x.fullPath+"\n"+fileObj.fullPath));
+
+					idList.push({
+						id,
+						name,
+						fullPath: fileObj.fullPath,
+					})
+				});
+			}
+
+			let hasVehicle = vehicleIdeRx.test(fileObj.text);
+			if (!hasVehicle) return;
+
+			ideFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(vehicleIdeRx).forEach(vehicleLine => {
+				let vehicleDetails = vehicleLine.split(vehicleIdeRx).slice(1,-1);
+				let vehicleId = parseInt(vehicleDetails[0]);
+				let vehicleName = vehicleDetails[1];
+				if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1);
+
+				let registeredVehicle = vehiclesList.find(veh =>
+					(veh.id == vehicleId && veh.name != vehicleName) || //id conflict
+					(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
+				);
+				if (registeredVehicle) {
+					console.warn(`CONFLICT: ${vehicleId} ${vehicleName}.\n${fileObj.fullPath}\n${registeredVehicle.filePaths.ide}`);
+					return;
+				}
+
+				//already exists (same id and same name)
+				if (vehiclesList.find(veh => veh.id == vehicleId) != null) {
+					registeredVehicle = vehiclesList.find(veh => veh.id == vehicleId);
+					registeredVehicle.hasDuplicate = true;
+					console.info(`double definition: ${vehicleId} ${vehicleName}.\n${fileObj.fullPath}\n${registeredVehicle.filePaths.ide}`);
+					return;
+				}
+
+				let fxtTag = vehicleDetails[5];
+				if (fxtTag.endsWith(",")) fxtTag = fxtTag.slice(0, -1);
+				
+				let handlingTag = vehicleDetails[4];
+				if (handlingTag.endsWith(",")) handlingTag = handlingTag.slice(0, -1);
+
+				/**
+				 * @type {Vehicle}
+				*/
+				let newVehicle = {
+					id: vehicleId,
+					type: vehicleDetails[3],
+					name: vehicleName,
+					gameName: fxtTags[fxtTag]?.text,
+					isDisabled: vehicleLine.startsWith("#"),
+					fxtTag,
+					handlingTag,
+					lines: {
+						ide: vehicleLine,
+						handling: handlingTags[handlingTag]?.line,
+						audio: vehicleAudio[vehicleName],
+						carcols: carcolsLines[vehicleName]?.line,
+						carmods: carmodsLines[vehicleName]?.line,
+					},
+					filePaths: {
+						ide: fileObj.fullPath,
+						fxt: fxtTags[fxtTag]?.fullPath,
+						handling: handlingTags[handlingTag]?.fullPath,
+						carcols: carcolsLines[vehicleName]?.fullPath,
+						carmods: carmodsLines[vehicleName]?.fullPath,
+					},
+				};
+
+				vehiclesList.push(newVehicle);
+			});
+		}
+		async function checkFileFxt(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (fxtFormatRX.test(fileObj.text) != true) return;
+			fxtFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(fxtFormatRX).forEach(line => {
+				let tag = line.split(" ")[0];
+				let text = line.split(" ").slice(1).join(" ").trim();
+
+				if (fxtTags[tag] != null) {
+					console.warn(`FXT: tag ${tag} renaming from ${fxtTags[tag].text} to ${text}.\n${fxtTags[tag].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				fxtTags[tag] = {
+					text,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.tags();
+		}
+		async function checkFileHanding(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (handlingRx.test(fileObj.text) != true) return;
+			handlingFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(handlingRx).forEach(line => {
+				let tag = line.split(" ")[0].split("\t")[0];
+
+				if (handlingTags[tag] != null && handlingTags[tag].line !== line) {
+					console.warn(`HANDLING: replacing ${tag}.\n${handlingTags[tag].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				handlingTags[tag] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.handlings();
+		}
+		async function checkFileCarcols(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (carcolsRX.test(fileObj.text) != true) return;
+			carcolsFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(carcolsRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+
+				if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line !== line) {
+					console.warn(`CARCOLS: replacing ${vehicleName}.\n${carcolsLines[vehicleName].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				carcolsLines[vehicleName] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.carcols();
+		}
+		async function checkFileCarMods(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (carmodsRX.test(fileObj.text) != true) return;
+			carmodsFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(carmodsRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+
+				for (let upgradeIndex = 0; upgradeIndex < carmodsUpgrades.length; upgradeIndex++) {
+					const upgrade = carmodsUpgrades[upgradeIndex];
+					if (vehicleName.startsWith(upgrade)) return;
+				}
+
+				if (carmodsLines[vehicleName] != null &&
+					carmodsLines[vehicleName].line.trim() != line.trim()
+				) {
+					console.warn(`CARMODS: replacing ${vehicleName}.\n${carmodsLines[vehicleName].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				carmodsLines[vehicleName] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.carmods();
+		}
+		async function checkFileVehAudio(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (fastman92AudioFile != null) {
+				console.error("there are 2 fastman files:\n"+fastman92AudioFile+"\n"+fileObj.fullPath);
+				return;
+			}
+			fastman92AudioFile = fileObj.fullPath;
+			if (vehicleAudioRX.test(fileObj.text) != true) {
+				console.error("corrupt fastman92 vehicle audio file");
+				return;
+			}
+
+			fileObj.text.match(vehicleAudioRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0];
+
+				if (vehicleAudio[vehicleName] != null) {
+					console.warn(`AUDIO: replacing ${vehicleName}.\n${fileObj.fullPath}`);
+				}
+
+				vehicleAudio[vehicleName] = line;
+			});
+
+			//update vehicles tag
+			VehicleUpdate.audio();
+		}
+		
+		
+		function updateVehicleData() {
+			const enabledVeh = vehiclesList.filter(x => !x.isDisabled);
+
+			//check for dff and txd existance
+			enabledVeh.forEach(veh => {
+				let dffLocation = Object.values(files).find(fileObj => fileObj.name.toLowerCase() == veh.name.toLowerCase()+".dff");
+				if (dffLocation != null) {
+					veh.filePaths.dff = dffLocation.fullPath;
+				} else if (veh.id < 400 || veh.id > 611) {
+					console.log("no dff vehicle: "+veh.id+" "+veh.name);
+				}
+
+				let txdLocation = Object.values(files).find(fileObj => fileObj.name.toLowerCase() == veh.name.toLowerCase()+".txd");
+				if (txdLocation != null) {
+					veh.filePaths.txd = txdLocation.fullPath;
+				} else if (veh.id < 400 || veh.id > 611) {
+					console.log("no txd vehicle: "+veh.id+" "+veh.name);
+				}
+			});
+		}
+		function updateFilesToIdList() {
+			let loadedFilesCount = Object.keys(files).length;
+			folderUpload.textContent = "Loaded "+loadedFilesCount+" out of "+fileCount+" files.";
+			if (loadedFilesCount !== fileCount) return;
+
+			let readingFilesCount = Object.values(files).filter(x => x.text instanceof Promise).length;
+			folderUpload.textContent = "Reading "+readingFilesCount+" file(s)";
+			if (readingFilesCount > 0) return;
+
+			folderUpload.textContent = "All files are loaded.";
+			folderUpload.classList.remove("active");
+			idTable.innerHTML = `
+				<tr>
+					<th>id</th>
+					<th>type</th>
+					<th>name</th>
+					<th>game name</th>
+					<th>file</th>
+				</tr>
+			`;
+
+
+			let wholeTable = ``;
+			updateVehicleData();
+			vehiclesList.forEach(veh => {
+				let id = veh.id;
+				let idName = veh.name;
+
+				let tabelElement = `
+					<tr>
+						<td class="${veh.isDisabled ? "missing" : ""}">${id}</td>
+						<td>${vehicleTypeIcons[veh.type]} ${veh.type}</td>
+						<td>${idName}</td>
+						<td class="${veh.gameName == null ? "missing" : ""}">${veh.gameName || veh.name.toUpperCase()}</td>
+						<td>${veh.filePaths.ide}</td>
+					</tr>
+				`;
+				wholeTable += tabelElement;
+				// idTable.innerHTML += tabelElement;
+				// updateIdStatus();
+			});
+
+			updateIdStatus();
+			console.log("Loaded Data.");
+			idTable.innerHTML += wholeTable;
+		}
+
+		function updateIdStatus() {
+			const enabledVeh = vehiclesList.filter(x => !x.isDisabled);
+
+			
+			let VehiclesWithTuning = enabledVeh.filter(x => 
+				x.lines.carmods?.replace(/,/g, " ").slice(x.name.length).trim()
+				.replace(/stereo/g, "")
+				.replace(/nto_b_[^ \n]+/g, "").trim()
+			);
+			window.VehiclesWithTuning = VehiclesWithTuning;
+
+			idStatus.innerHTML = `
+			In-Game Vehicles: ${enabledVeh.length}
+			Disabled Vehicles: ${vehiclesList.filter(x => x.isDisabled).length}
+			Total Vehicles: ${vehiclesList.length}
+			Vehicles with tuning: ${VehiclesWithTuning.length}
+			Vehicles without color: ${enabledVeh.filter(x => !x.lines.carcols).length} (includes uncolorable vehicles)
+			Vehicles without audio: ${enabledVeh.filter(x => !x.lines.audio).length}
+			Vehicles without handling: ${enabledVeh.filter(x => !x.lines.handling).length}
+			Handling Count: ${Object.keys(handlingTags).length}
+			`.trim().replace(/\n/gm, "<br>");
+		}
+
+
+
+
+		function generateCheatMenu() {
+			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && (x.id < 400 || x.id > 611));
+			const usedNames = [];
+
+			prompt("Copy and paste in `CheatMenuSA\\data\\vehicles.toml`", "[Custom]\n"+
+			enabledCustomVeh.map((veh, vehi) => {
+					let vehicleName = (veh.gameName || veh.name.toUpperCase()).replace(/'/g, "");
+
+					while (usedNames.includes(vehicleName)) {
+						vehicleName = vehicleName + " ";
+					}
+					usedNames.push(vehicleName);
+
+					return `'${vehicleName}' = '${veh.id}'`;
+				}).join("\n"),
+			);
+		}
+	</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<div id="id-status"></div>
+
+	<table id="id-table">
+		<tbody id="id-table-body"></tbody>
+	</table>
+
+	<script>
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const idStatus = document.getElementById("id-status");
+		const idTable = document.getElementById("id-table");
+		let usedIds = [];
+		/** @type {{
+		 * name: string;
+		 * path: string;
+		 * size: number;
+		 * text: string;
+		 * }[]} */
+		let allFiles = [];
+		let conflictIds = [];
+		let idList = {};
+		window.availabeIds = [];
+
+		
+		let dropArea = document;
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			event.preventDefault();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			folderUpload.classList.remove("active");
+
+			let waitingList = [];
+			for (var i=0; i<items.length; i++) {
+				// webkitGetAsEntry is where the magic happens
+				var item = items[i].webkitGetAsEntry();
+				if (item) {
+					let result = traverseFileTree(item);
+					waitingList.push(result);
+				}
+			}
+			// await Promise.all(waitingList);
+
+			// updateFilesToIdList();
+		}, false);
+
+		
+		async function traverseFileTree(item, path) {
+			path = path || "";
+			if (item.isFile) {
+				// Get file
+				item.file(function(file) {
+					// console.log(path, "File:", path + file.name, file);
+					if (file.name.toLowerCase().endsWith(".ide")) addFileToIdList(path, file);
+					if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(path, file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			} else if (item.isDirectory) {
+				// Get folder contents
+				var dirReader = item.createReader();
+				const enteriesReader = async () => {
+					await new Promise((resolve, reject) => {
+						dirReader.readEntries(async function(entries) {
+							let waitingList = [];
+
+							let isGameFolder = entries.find(x => x.name.toLowerCase() == "modloader" && x.isDirectory) != null;
+							let itemName = item.name + "/";
+							if (isGameFolder) itemName = "";
+							// console.log(item, path, isGameFolder, initialPath, entries);
+
+							for (var i=0; i<entries.length; i++) {
+								let result = traverseFileTree(entries[i], path + itemName);
+								waitingList.push(result);
+							}
+							// await Promise.all(waitingList);
+
+							//reads 100 more
+							if (entries.length >= 99) await enteriesReader();
+
+							resolve();
+						});
+					});
+				};
+				return enteriesReader();
+			}
+		}
+
+		function addFileToIdList(path, file) {
+			console.log("File:", file.name);
+			let newFileObj = {
+				name: file.name,
+				path,
+				size: file.size,
+				text: file.text(),
+			};
+			allFiles.push(newFileObj);
+
+			newFileObj.text.then(x => newFileObj.text = x).then(updateFilesToIdList);
+		}
+		function updateFilesToIdList() {
+			if (allFiles.filter(x => x.text instanceof Promise).length > 0) return;
+			idTable.innerHTML = `
+				<tr>
+					<th>line number</th>
+					<th>line</th>
+					<th>file</th>
+				</tr>
+			`;
+			// await Promise.all(allFiles.map(x => x.text)).then(promiseResults => {
+			// 	allFiles.forEach((x,xi) => {
+			// 		x.text = promiseResults[xi];
+			// 	});
+			// });
+
+			let completedFiles = 0;
+			conflictIds = [];
+			let wholeTable = ``;
+			allFiles.forEach((file, filei) => {
+				// setTimeout((file) => {
+					if (file.text == null) console.log(file);
+					let foundlines = file.text.match(/^\d+(,| ) *.+(,| )/gm);
+					completedFiles++;
+					console.log("loading file", completedFiles, "out of", allFiles.length);
+					if (foundlines == null || foundlines.length == 0) return;
+					foundlines.forEach(x => {
+						let id = parseInt(x.split(",")[0].split(" ")[0]);
+						let idName = x.split(",")[1]?.trim();
+
+						if (idName == null || !isNaN(parseFloat(idName))) return;
+
+						if (idList[id] == null) idList[id] = [];
+						let isAlreadyExists = usedIds.includes(id);
+						if (isAlreadyExists) {
+							if (!idList[id].every(x => x.id == id && x.name == idName) && !conflictIds.includes(id)) conflictIds.push(id);
+						}
+						if (!isAlreadyExists) usedIds.push(id);
+						idList[id].push({
+							id,
+							conflict: isAlreadyExists,
+							name: idName,
+							path: file.path,
+							filename: file.name,
+						})
+						let tabelElement = `
+							<tr>
+								<td>${isAlreadyExists ? "<b>"+id+"</b>" : id}</td>
+								<td>${idName}</td>
+								<td>${file.path + file.name}</td>
+							</tr>
+						`;
+						wholeTable += tabelElement;
+						// idTable.innerHTML += tabelElement;
+					})
+					// updateIdStatus();
+				// }, filei+1, filee);
+			});
+
+			updateIdStatus();
+			console.log("DONE");
+			idTable.innerHTML += wholeTable;
+		}
+
+		function updateIdStatus() {
+			let fullStatus = ``;
+			let lastIncludedIndex = -1;
+			let usedIdsList = removeDuplicates(usedIds);
+
+			//start
+			if (usedIdsList.includes(0)) {
+				lastIncludedIndex = 0;
+				fullStatus += "[<s>0";
+			} else {
+				fullStatus += "0";
+			}
+
+			//mid
+			for (let index = 1; index < 20_000; index++) {
+				if (usedIdsList.includes(index)) {
+					if (lastIncludedIndex != index - 1) {
+						//new blocked range
+						fullStatus += "~"+(index - 1)+" [<s>"+index;
+					} else {
+						//same blocked range
+					}
+					lastIncludedIndex = index;
+					continue;
+				}
+
+				window.availabeIds.push(index);
+				if (lastIncludedIndex == index - 1) {
+					//new empty range
+					fullStatus += "~"+lastIncludedIndex+"</s>] "+index;
+				} else {
+					//same empty range
+				}
+			}
+
+			//end
+			if (usedIdsList.includes(20_000)) {
+				if (lastIncludedIndex != 20_000 - 1) {
+						//new blocked range
+						fullStatus += "~"+(20_000 - 1)+" [<s>"+20_000+"</s>]";
+					} else {
+						//same blocked range
+						fullStatus += "~"+lastIncludedIndex+"</s>] ";
+					}
+					lastIncludedIndex = 20_000;
+			} else {
+				if (lastIncludedIndex == 20_000 - 1) {
+					//new empty range
+					fullStatus += "~"+lastIncludedIndex+"</s>] "+20_000;
+				} else {
+					//same empty range
+					fullStatus += "~"+(20_000 - 1);
+				}
+			}
+
+			idStatus.innerHTML = fullStatus.replace(/(\d+)~\1(?!\d)/g, "$1");
+			idStatus.innerHTML += `<br>${usedIdsList.length} used / ${20_000 - usedIdsList.length} unused / ${conflictIds.length} conflicts`;
+		}
+
+
+		function removeDuplicates(arr) {
+			return arr.filter((item, index) => arr.indexOf(item) === index);
+		}
+	</script>
+</body>
+</html>
