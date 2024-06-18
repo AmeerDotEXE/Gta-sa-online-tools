@@ -101,6 +101,7 @@
 		<h3>Actions</h3>
 		<div>
 			<button class="input" onclick="generateCheatMenu()">Generate Cheat Menu</button>
+			<button class="input" onclick="generateVehiclesTest()">Generate Vehicles Test</button>
 		</div>
 	</div>
 	<div class="section" hidden>
@@ -693,6 +694,11 @@
 			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && (x.id < 400 || x.id > 611));
 			const usedNames = [];
 
+			if (enabledCustomVeh.length == 0) {
+				alert("No custom vehicles detected.");
+				return;
+			}
+
 			prompt("Copy and paste in `CheatMenuSA\\data\\vehicles.toml`", "[Custom]\n"+
 			enabledCustomVeh.map((veh, vehi) => {
 					let vehicleName = (veh.gameName || veh.name.toUpperCase()).replace(/'/g, "");
@@ -704,6 +710,34 @@
 
 					return `'${vehicleName}' = '${veh.id}'`;
 				}).join("\n"),
+			);
+		}
+		function generateVehiclesTest() {
+			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && (x.id < 400 || x.id > 611));
+			let lowestId = Infinity;
+			let highestId = 0;
+			let unavailableIds = [];
+
+			if (enabledCustomVeh.length == 0) {
+				alert("No custom vehicles detected.");
+				return;
+			}
+
+			//get highest and lowest ids
+			enabledCustomVeh.forEach((veh, vehi) => {
+				if (veh.id > highestId) highestId = veh.id;
+				if (veh.id < lowestId) lowestId = veh.id;
+			});
+
+			//search from lows to highs and list unavailable ids
+			for (let idIndex = lowestId; idIndex <= highestId; idIndex++) {
+				if (enabledCustomVeh.find(x => x.id == idIndex) != null) continue;
+
+				unavailableIds.push(idIndex);
+			}
+
+			prompt(`Copy and paste in 'cleo\\Vehicles Test.ini'\nStart At: ${lowestId}\nEnd At: ${highestId}\nTotal: ${unavailableIds.length}`, 
+				unavailableIds.map((id, index) => `ID${index+1} = ${id}`).join("\n")
 			);
 		}
 	</script>
