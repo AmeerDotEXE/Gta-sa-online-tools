@@ -192,6 +192,7 @@
 			<button class="input" onclick="generateVehiclesTest()" title="generates info needed for vehicle test mod to load all custom vehicles">Generate Vehicles Test</button>
 			<button class="input" onclick="modifyVehiclesIds()" title="Changes a list of vehicles ids to another range">Modify Vehicles Ids</button>
 			<button class="input" onclick="modifyVehiclesName()" title="Changes names for a list of vehicles using regex">Modify Vehicles Names</button>
+			<button class="input" onclick="vehiclesSeparator()" title="Saparates existing vehicles from new ones">Vehicles Separator</button>
 		</div>
 	</div>
 	<div class="section">
@@ -287,7 +288,7 @@
 			<span>Paste your vehicles ide list</span>
 			<input class="input" id="modifyids-startindex" type="number" value="19999">
 			<label style="display: flex;gap: 0.25rem;"><input id="modifyids-skipexistingids" class="input" type="checkbox" checked> Skip existing ids</label>
-			<textarea class="input" id="modifyids-vehicles" style="height: 100%;">...</textarea>
+			<textarea class="input" id="modifyids-vehicles" style="height: 100%;"></textarea>
 			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
 		</div>
 		<div class="popup" id="modifynames-popup">
@@ -296,6 +297,15 @@
 			<input class="input" id="modifynames-to" placeholder="to...">
 			<button class="input" id="modifynames-update">Update</button>
 			<textarea class="input" id="modifynames-vehicles" style="height: 100%;">...</textarea>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="vehiclesepartor-popup">
+			<span>Paste your vehicles ide list on the left<br>it will move existing ones to the right</span>
+			<button class="input" id="vehiclesepartor-update">Update</button>
+			<div style="display: flex;height: 100%;gap: 1rem;">
+				<textarea class="input" id="vehiclesepartor-vehicles" style="width: 100%;"></textarea>
+				<textarea class="input" id="vehiclesepartor-existing" style="width: 100%;" readonly></textarea>
+			</div>
 			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
 		</div>
 	</div>
@@ -469,6 +479,9 @@
 				fullPath: "text/american.gxt", // american.gxt if english
 			};
 		});
+
+		//console header
+		console.log("this project was made for personal use. its rushed out and not professionally written. the purpose of releasing this tool is to allow others to benifet from it too, you are free to copy, modify this tool just don't lock it behind a paywall. its made to help people and it has helped me a lot so i hope it helps you too.")
 
 		//area where it would detect game files being dropped
 		let dropArea = document;
@@ -1157,6 +1170,120 @@
 
 			popup.classList.add("active");
 		}
+		function vehiclesSeparator() {
+			const popup = document.getElementById("vehiclesepartor-popup");
+			const updateBtn = document.getElementById("vehiclesepartor-update");
+			const allVehicles = document.getElementById("vehiclesepartor-vehicles");
+			const existingVeh = document.getElementById("vehiclesepartor-existing");
+
+			updateBtn.addEventListener("click", () => {
+				let existingLines = [];
+				allVehicles.value = allVehicles.value.replace(vehicleIdeRx, (line, ...vehicleDetails) => {
+
+					let vehicleId = parseInt(vehicleDetails[0]);
+					let vehicleName = vehicleDetails[1];
+					if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1);
+
+					//conflict
+					let registeredVehicle = vehiclesList.find(veh =>
+						(veh.id == vehicleId && veh.name != vehicleName) || //id conflict
+						(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
+					);
+					if (registeredVehicle) {
+						if (registeredVehicle.id == vehicleId) existingLines.push(line);
+						else existingLines.push(line);
+						return "";
+					}
+
+					//already exists (same id and same name)
+					if (vehiclesList.find(veh => veh.id == vehicleId) != null) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				existingLines.push("");
+				allVehicles.value = allVehicles.value.replace(carcolsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+					if (vehicleName == "DK22Pac") return line;
+
+					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() == line.trim()) {
+						return "";
+					}
+					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() !== line.trim()) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				existingLines.push("");
+				allVehicles.value = allVehicles.value.replace(carmodsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+
+					if (carmodsLines[vehicleName] != null &&
+						carmodsLines[vehicleName].line.trim() == line.trim()
+					) {
+						return "";
+					}
+					if (carmodsLines[vehicleName] != null &&
+						carmodsLines[vehicleName].line.trim() != line.trim()
+					) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				existingLines.push("");
+				allVehicles.value = allVehicles.value.replace(handlingRx, (line) => {
+
+					let tag = line.split(" ")[0].split("\t")[0];
+
+					if (handlingTags[tag] != null && handlingTags[tag].line.trim() == line.trim()) {
+						return "";
+					}
+					if (handlingTags[tag] != null && handlingTags[tag].line.trim() !== line.trim()) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				existingLines.push("");
+				allVehicles.value = allVehicles.value.replace(fxtFormatRX, (line) => {
+
+					let tag = line.split(" ")[0];
+					let text = line.split(" ").slice(1).join(" ").trim();
+
+					if (fxtTags[tag] != null) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				existingLines.push("");
+				allVehicles.value = allVehicles.value.replace(vehicleAudioRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0];
+
+					if (vehicleAudio[vehicleName] != null) {
+						existingLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+
+				existingVeh.value = existingLines.join("\n");
+			});
+
+			popup.classList.add("active");
+		}
 		
 		function updateSearch() {
 			updateVisibleList();
@@ -1207,7 +1334,7 @@
 						.replace(/stereo/g, "")
 						.replace(/nto_b_[^ \n]+/g, "").trim() || "") != "";
 					if (filters.Tuning == 0 && !hasTuning) isShowing = false;
-					else if (filters.Tuning == 2 && hasTuning) isShowing = false;
+					else if (filters.Tuning == 2 && veh.lines.carmods != null) isShowing = false;
 				}
 				if (isShowing && filters.Audio != 1) {
 					if (filters.Audio == 0 && veh.lines.audio == null) isShowing = false;
