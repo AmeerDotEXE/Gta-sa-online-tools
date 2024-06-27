@@ -193,6 +193,7 @@
 			<button class="input" onclick="modifyVehiclesIds()" title="Changes a list of vehicles ids to another range">Modify Vehicles Ids</button>
 			<button class="input" onclick="modifyVehiclesName()" title="Changes names for a list of vehicles using regex">Modify Vehicles Names</button>
 			<button class="input" onclick="vehiclesSeparator()" title="Saparates existing vehicles from new ones">Vehicles Separator</button>
+			<button class="input" onclick="vehiclesOrgenizer()" title="Orgenizes vehicle lines by line type; ide, dat, etc.">Vehicles Orgenizer</button>
 		</div>
 	</div>
 	<div class="section">
@@ -305,6 +306,15 @@
 			<div style="display: flex;height: 100%;gap: 1rem;">
 				<textarea class="input" id="vehiclesepartor-vehicles" style="width: 100%;"></textarea>
 				<textarea class="input" id="vehiclesepartor-existing" style="width: 100%;" readonly></textarea>
+			</div>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="vehicleorgenizer-popup">
+			<span>Paste your vehicles lines list on the left<br>it will categorize them into the right</span>
+			<button class="input" id="vehicleorgenizer-update">Update</button>
+			<div style="display: flex;height: 100%;gap: 1rem;">
+				<textarea class="input" id="vehicleorgenizer-vehicles" style="width: 100%;"></textarea>
+				<textarea class="input" id="vehicleorgenizer-existing" style="width: 100%;"></textarea>
 			</div>
 			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
 		</div>
@@ -1049,7 +1059,7 @@
 			if (summary.MissingTXD.length > 0) errorSection.innerHTML += `<b>${summary.MissingTXD.length} Missing TXD:</b> ${summary.MissingTXD.join(", ")}<br>`;
 			if (summary.MissingHandling.length > 0) errorSection.innerHTML += `<b>${summary.MissingHandling.length} Missing Handling:</b> ${summary.MissingHandling.join(", ")}<br>`;
 			if (summary.ExtraAudio.length > 0) errorSection.innerHTML += `<b>${summary.ExtraAudio.length} Unused Vehicle Audio:</b> ${summary.ExtraAudio.join(", ")}<br>`;
-			if (summary.ExtraCarCols.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarCols.length} Unused CarCols:</b> ${summary.ExtraCarCols.join(", ")}<br>`;
+			if (summary.ExtraCarCols.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarCols.length} Unused CarCols:</b> ${summary.ExtraCarCols.map(x => `<span title="${carcolsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
 		}
 
 
@@ -1325,6 +1335,74 @@
 				});
 
 				existingVeh.value = existingLines.join("\n");
+			});
+
+			popup.classList.add("active");
+		}
+		function vehiclesOrgenizer() {
+			const popup = document.getElementById("vehicleorgenizer-popup");
+			const updateBtn = document.getElementById("vehicleorgenizer-update");
+			const allVehicles = document.getElementById("vehicleorgenizer-vehicles");
+			const existingVeh = document.getElementById("vehicleorgenizer-existing");
+
+			updateBtn.addEventListener("click", () => {
+				let existingLines = {
+					ide: [],
+					carcols: [],
+					carmods: [],
+					handling: [],
+					audio: [],
+					fxt: [],
+				};
+				allVehicles.value = allVehicles.value.replace(vehicleIdeRx, (line) => {
+					existingLines.ide.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(carcolsRX, (line) => {
+					existingLines.carcols.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(carmodsRX, (line) => {
+					existingLines.carmods.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(handlingRx, (line) => {
+					existingLines.handling.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(vehicleAudioRX, (line) => {
+					existingLines.audio.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(fxtFormatRX, (line) => {
+					existingLines.fxt.push(line);
+					return "";
+				});
+
+				if (existingLines.ide.length > 0) {
+					existingVeh.value += `\n\n\n####################\n#   Vehciles.ide   #\n####################\n\n`;
+					existingVeh.value += existingLines.ide.join("\n")+"\n";
+				}
+				if (existingLines.carcols.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#   CarCols.dat   #\n###################\n\n`;
+					existingVeh.value += existingLines.carcols.join("\n")+"\n";
+				}
+				if (existingLines.carmods.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#   CarMods.dat   #\n###################\n\n`;
+					existingVeh.value += existingLines.carmods.join("\n")+"\n";
+				}
+				if (existingLines.handling.length > 0) {
+					existingVeh.value += `\n\n\n####################\n#   Handling.cfg   #\n####################\n\n`;
+					existingVeh.value += existingLines.handling.join("\n")+"\n";
+				}
+				if (existingLines.audio.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#  Vehcile Audio  #\n###################\n\n`;
+					existingVeh.value += existingLines.audio.join("\n")+"\n";
+				}
+				if (existingLines.fxt.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#       FXT       #\n###################\n\n`;
+					existingVeh.value += existingLines.fxt.join("\n")+"\n";
+				}
 			});
 
 			popup.classList.add("active");
