@@ -321,6 +321,7 @@
 	</div>
 
 	<script>
+		"use strict";
 		const folderUpload = document.getElementById("gta-folder-upload");
 		const idStatus = document.getElementById("id-status");
 		const idTable = document.getElementById("id-table");
@@ -875,8 +876,11 @@
 			//check for dff and txd existance
 			enabledVeh.forEach(veh => {
 				const vehicleFileName = veh.name.toLowerCase();
-				const filesWithVehicleName = Object.values(files).filter(fileObj => fileObj.name.toLowerCase().startsWith(vehicleFileName));
-				let dffLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == veh.name.toLowerCase()+".dff");
+				let txdname = veh.lines.ide.split(vehicleIdeRx)[3].trim().toLowerCase();
+				if (txdname.endsWith(",")) txdname = txdname.slice(0, -1).trim();
+				const filesWithVehicleName = Object.values(files).filter(fileObj => fileObj.name.toLowerCase().startsWith(vehicleFileName) || fileObj.name.toLowerCase().startsWith(txdname));
+
+				let dffLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == vehicleFileName+".dff");
 				if (dffLocation != null) {
 					veh.filePaths.dff = dffLocation.fullPath;
 				} else if (!veh.isDefault) {
@@ -884,7 +888,7 @@
 					summary.MissingDFF.push(veh.id);
 				}
 
-				let txdLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == veh.name.toLowerCase()+".txd");
+				let txdLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == txdname+".txd");
 				if (txdLocation != null) {
 					veh.filePaths.txd = txdLocation.fullPath;
 				} else if (!veh.isDefault) {
@@ -973,7 +977,7 @@
 				let tabelElement = `
 					<tr>
 						<td class="center" title="${vehicleSummary.details}" style="color: ${vehicleSummary.color};">${vehicleSummary.icon}</td>
-						<td class="center ${veh.isDisabled ? "missing" : ""}" title="${veh.filePaths.ide}" copy="${id}">${id}</td>
+						<td class="center ${veh.isDisabled ? "missing" : ""}" title="${veh.filePaths.ide}\n${veh.lines.ide}" copy="${id}">${id}</td>
 						<td copy="${veh.lines.ide}">${vehicleTypeIcons[veh.type]} ${veh.type}</td>
 						<td copy="${idName}">${idName}</td>
 						<td class="${veh.gameName == null ? "missing" : ""}" title="${veh.fxtTag}\n${veh.filePaths.fxt}" copy="${veh.fxtTag}">${veh.gameName || veh.name.toUpperCase()}</td>
@@ -1065,8 +1069,19 @@
 
 
 
+		const initilizedActions = {
+			cheatmenu: false,
+			vehiclestest: false,
+			modifyids: false,
+			modifynames: false,
+			vehiclesepartor: false,
+			vehicleorgenizer: false,
+		}
 		function generateCheatMenu() {
 			const popup = document.getElementById("cheatmenu-popup");
+			if (initilizedActions.cheatmenu) return popup.classList.add("active");
+			initilizedActions.cheatmenu = true;
+
 			const textBox = document.getElementById("cheatmenu-vehicles");
 			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && !x.isDefault);
 			const usedNames = [];
@@ -1104,6 +1119,9 @@
 		}
 		function generateVehiclesTest() {
 			const popup = document.getElementById("vehiclestest-popup");
+			if (initilizedActions.vehiclestest) return popup.classList.add("active");
+			initilizedActions.vehiclestest = true;
+
 			const textBox = document.getElementById("vehiclestest-vehicles");
 			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && !x.isDefault);
 			let lowestId = Infinity;
@@ -1136,6 +1154,9 @@
 		}
 		function modifyVehiclesIds() {
 			const popup = document.getElementById("modifyids-popup");
+			if (initilizedActions.modifyids) return popup.classList.add("active");
+			initilizedActions.modifyids = true;
+
 			const startIndex = document.getElementById("modifyids-startindex");
 			const skipExistingIdsInput = document.getElementById("modifyids-skipexistingids");
 			const textBox = document.getElementById("modifyids-vehicles");
@@ -1167,6 +1188,9 @@
 		}
 		function modifyVehiclesName() {
 			const popup = document.getElementById("modifynames-popup");
+			if (initilizedActions.modifynames) return popup.classList.add("active");
+			initilizedActions.modifynames = true;
+
 			const fromRx = document.getElementById("modifynames-from");
 			const toRx = document.getElementById("modifynames-to");
 			const updateBtn = document.getElementById("modifynames-update");
@@ -1227,6 +1251,9 @@
 		}
 		function vehiclesSeparator() {
 			const popup = document.getElementById("vehiclesepartor-popup");
+			if (initilizedActions.vehiclesepartor) return popup.classList.add("active");
+			initilizedActions.vehiclesepartor = true;
+
 			const updateBtn = document.getElementById("vehiclesepartor-update");
 			const allVehicles = document.getElementById("vehiclesepartor-vehicles");
 			const existingVeh = document.getElementById("vehiclesepartor-existing");
@@ -1245,8 +1272,7 @@
 						(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
 					);
 					if (registeredVehicle) {
-						if (registeredVehicle.id == vehicleId) existingLines.push(line);
-						else existingLines.push(line);
+						existingLines.push(line);
 						return "";
 					}
 
@@ -1265,6 +1291,7 @@
 					if (vehicleName == "DK22Pac") return line;
 
 					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() == line.trim()) {
+						console.log(vehicleName, carcolsLines[vehicleName].line, line, carcolsLines[vehicleName].line.trim() == line.trim())
 						return "";
 					}
 					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() !== line.trim()) {
@@ -1341,6 +1368,9 @@
 		}
 		function vehiclesOrgenizer() {
 			const popup = document.getElementById("vehicleorgenizer-popup");
+			if (initilizedActions.vehicleorgenizer) return popup.classList.add("active");
+			initilizedActions.vehicleorgenizer = true;
+
 			const updateBtn = document.getElementById("vehicleorgenizer-update");
 			const allVehicles = document.getElementById("vehicleorgenizer-vehicles");
 			const existingVeh = document.getElementById("vehicleorgenizer-existing");
