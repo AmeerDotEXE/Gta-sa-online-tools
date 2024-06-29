@@ -871,10 +871,9 @@
 		
 		
 		function updateVehicleData() {
-			const enabledVeh = vehiclesList.filter(x => !x.isDisabled);
 
 			//check for dff and txd existance
-			enabledVeh.forEach(veh => {
+			vehiclesList.forEach(veh => {
 				const vehicleFileName = veh.name.toLowerCase();
 				let txdname = veh.lines.ide.split(vehicleIdeRx)[3].trim().toLowerCase();
 				if (txdname.endsWith(",")) txdname = txdname.slice(0, -1).trim();
