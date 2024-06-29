@@ -882,7 +882,7 @@
 				let dffLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == vehicleFileName+".dff");
 				if (dffLocation != null) {
 					veh.filePaths.dff = dffLocation.fullPath;
-				} else if (!veh.isDefault) {
+				} else if (!veh.isDefault && !veh.isDisabled) {
 					console.log("no dff vehicle: "+veh.id+" "+veh.name);
 					summary.MissingDFF.push(veh.id);
 				}
@@ -890,7 +890,7 @@
 				let txdLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == txdname+".txd");
 				if (txdLocation != null) {
 					veh.filePaths.txd = txdLocation.fullPath;
-				} else if (!veh.isDefault) {
+				} else if (!veh.isDefault && !veh.isDisabled) {
 					console.log("no txd vehicle: "+veh.id+" "+veh.name);
 					summary.MissingTXD.push(veh.id);
 				}
@@ -1036,7 +1036,7 @@
 			const errorHeader = document.getElementById("summary-errors-count");
 			const errorSection = document.getElementById("summary-errors");
 
-			summary.ExtraAudio = Object.keys(vehicleAudio).filter(x => vehiclesList.find(veh => veh.name == x) == null);
+			summary.ExtraAudio = Object.keys(vehicleAudio).filter(x => vehiclesList.find(veh => veh.name == x && !veh.isDisabled) == null);
 			summary.ExtraCarCols = Object.keys(carcolsLines).filter(x => vehiclesList.find(veh => veh.name == x) == null);
 
 
