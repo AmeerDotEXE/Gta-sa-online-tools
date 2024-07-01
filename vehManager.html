@@ -1258,7 +1258,9 @@
 			const existingVeh = document.getElementById("vehiclesepartor-existing");
 
 			updateBtn.addEventListener("click", () => {
-				let existingLines = [];
+				existingVeh.value = "";
+				let conflictLines = [];
+				let duplicateLines = [];
 				allVehicles.value = allVehicles.value.replace(vehicleIdeRx, (line, ...vehicleDetails) => {
 
 					let vehicleId = parseInt(vehicleDetails[0]);
@@ -1271,36 +1273,36 @@
 						(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
 					);
 					if (registeredVehicle) {
-						existingLines.push(line);
+						conflictLines.push(line);
 						return "";
 					}
 
 					//already exists (same id and same name)
 					if (vehiclesList.find(veh => veh.id == vehicleId) != null) {
-						existingLines.push(line);
+						duplicateLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
-				existingLines.push("");
+				conflictLines.push("");
 				allVehicles.value = allVehicles.value.replace(carcolsRX, (line) => {
 
 					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
 					if (vehicleName == "DK22Pac") return line;
 
 					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() == line.trim()) {
-						console.log(vehicleName, carcolsLines[vehicleName].line, line, carcolsLines[vehicleName].line.trim() == line.trim())
+						duplicateLines.push(line);
 						return "";
 					}
 					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() !== line.trim()) {
-						existingLines.push(line);
+						conflictLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
-				existingLines.push("");
+				conflictLines.push("");
 				allVehicles.value = allVehicles.value.replace(carmodsRX, (line) => {
 
 					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
@@ -1308,59 +1310,65 @@
 					if (carmodsLines[vehicleName] != null &&
 						carmodsLines[vehicleName].line.trim() == line.trim()
 					) {
+						duplicateLines.push(line);
 						return "";
 					}
 					if (carmodsLines[vehicleName] != null &&
 						carmodsLines[vehicleName].line.trim() != line.trim()
 					) {
-						existingLines.push(line);
+						conflictLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
-				existingLines.push("");
+				conflictLines.push("");
 				allVehicles.value = allVehicles.value.replace(handlingRx, (line) => {
 
 					let tag = line.split(" ")[0].split("\t")[0];
 
 					if (handlingTags[tag] != null && handlingTags[tag].line.trim() == line.trim()) {
+						duplicateLines.push(line);
 						return "";
 					}
 					if (handlingTags[tag] != null && handlingTags[tag].line.trim() !== line.trim()) {
-						existingLines.push(line);
+						conflictLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
-				existingLines.push("");
+				conflictLines.push("");
 				allVehicles.value = allVehicles.value.replace(fxtFormatRX, (line) => {
 
 					let tag = line.split(" ")[0];
 					let text = line.split(" ").slice(1).join(" ").trim();
 
 					if (fxtTags[tag] != null) {
-						existingLines.push(line);
+						conflictLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
-				existingLines.push("");
+				conflictLines.push("");
 				allVehicles.value = allVehicles.value.replace(vehicleAudioRX, (line) => {
 
 					let vehicleName = line.split(" ")[0].split("\t")[0];
 
-					if (vehicleAudio[vehicleName] != null) {
-						existingLines.push(line);
+					if (vehicleAudio[vehicleName] != null && vehicleAudio[vehicleName].trim() == line.trim()) {
+						duplicateLines.push(line);
+						return "";
+					}
+					if (vehicleAudio[vehicleName] != null && vehicleAudio[vehicleName].trim() !== line.trim()) {
+						conflictLines.push(line);
 						return "";
 					}
 
 					return line;
 				});
 
-				existingVeh.value = existingLines.join("\n");
+				existingVeh.value = "\n\n# Conflicts\n\n"+conflictLines.join("\n")+"\n\n\n\n# Duplicates\n\n"+duplicateLines.join("\n");
 			});
 
 			popup.classList.add("active");
@@ -1375,6 +1383,7 @@
 			const existingVeh = document.getElementById("vehicleorgenizer-existing");
 
 			updateBtn.addEventListener("click", () => {
+				existingVeh.value = "";
 				let existingLines = {
 					ide: [],
 					carcols: [],
