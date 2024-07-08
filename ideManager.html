@@ -121,7 +121,7 @@
 						dirReader.readEntries(async function(entries) {
 							let waitingList = [];
 
-							let isGameFolder = entries.find(x => x.name.toLowerCase() == "modloader" && x.isDirectory) != null;
+							let isGameFolder = entries.find((x) => x.name.toLowerCase() == "vorbis.dll" && x.isFile) != null;
 							let itemName = item.name + "/";
 							if (isGameFolder) itemName = "";
 							// console.log(item, path, isGameFolder, initialPath, entries);
@@ -176,11 +176,12 @@
 			allFiles.forEach((file, filei) => {
 				// setTimeout((file) => {
 					if (file.text == null) console.log(file);
-					let foundlines = file.text.match(/^\d+(,| ) *.+(,| )/gm);
+					let foundlines = file.text.match(/^#?\d+(,| ) *.+(,| )/gm);
 					completedFiles++;
 					console.log("loading file", completedFiles, "out of", allFiles.length);
 					if (foundlines == null || foundlines.length == 0) return;
 					foundlines.forEach(x => {
+						if (x.startsWith("#")) x = x.slice(1);
 						let id = parseInt(x.split(",")[0].split(" ")[0]);
 						let idName = x.split(",")[1]?.trim();
 
