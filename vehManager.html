@@ -163,6 +163,45 @@
 		.popup:not(.active) {
 			display: none;
 		}
+
+		.custom-select {
+			position: relative;
+			margin-top: 0.25rem;
+		}
+		.custom-select select {
+			appearance: none;
+			width: 100%;
+			/* font-size: 1.15rem; */
+			padding: 0.25rem 0.5rem;
+			color: #fff;
+			background: #363636;
+			outline: none;
+			border: 0;
+			border-radius: 6px;
+			cursor: pointer;
+		}
+		.custom-select::before,
+		.custom-select::after {
+			--size: 0.3rem;
+			position: absolute;
+			content: "";
+			right: 0.5em;
+			pointer-events: none;
+		}
+
+		.custom-select::before {
+			border-left: var(--size) solid transparent;
+			border-right: var(--size) solid transparent;
+			border-bottom: var(--size) solid white;
+			top: 0.4rem;
+		}
+
+		.custom-select::after {
+			border-left: var(--size) solid transparent;
+			border-right: var(--size) solid transparent;
+			border-top: var(--size) solid white;
+			bottom: 0.4rem;
+		}
 	</style>
 </head>
 <body>
@@ -262,6 +301,24 @@
 							<i class="fa-solid fa-xmark"></i>
 						</div>
 					</div>
+					<div class="filter-option custom-select" filter-type="input" filter-for="ClassType">
+						<select value="any" filter-select>
+							<option value="any">Any Vehicle Class</option>
+							<option value="normal">Normal</option>
+							<option value="poorfamily">Poor Family</option>
+							<option value="executive">Executive</option>
+							<option value="worker">Worker</option>
+							<option value="richfamily">Rich Family</option>
+							<option value="ignore">Ignore</option>
+							<option value="taxi">Taxi</option>
+							<option value="big">Big</option>
+							<option value="leisureboat">Leisure Boat</option>
+							<option value="workerboat">Worker Boat</option>
+							<option value="motorbike">Motorbike</option>
+							<option value="moped">Moped</option>
+							<option value="bicycle">Bicycle</option>
+						</select>
+					</div>
 				</div>
 			</details>
 			<!-- filters -->
@@ -359,6 +416,7 @@
 		 * isDefault: boolean;
 		 * fxtTag: string;
 		 * handlingTag: string;
+		 * vehicleClass: string;
 		 * lines: {
 		 * 		ide: string;
 		 * 		handling: string;
@@ -463,6 +521,7 @@
 			Tuning: 1,
 			HasColors: 1,
 			HasHandling: 1,
+			ClassType: "any",
 		};
 		let summary = {
 			//errors
@@ -545,6 +604,18 @@
 			};
 
 			updateOptions(true);
+		});
+		document.querySelectorAll(`.filter-option[filter-type="input"]`).forEach((filterElement) => {
+			let filterFor = filterElement.getAttribute("filter-for");
+			let filterInput = filterElement.querySelector("[filter-select]");
+			if (filters[filterFor] == null) return console.error("filter not exist", filterFor);
+
+			filterInput.addEventListener("change", () => {
+				filters[filterFor] = filterInput.value;
+
+				//update list
+				updateVisibleList();
+			});
 		});
 
 
@@ -722,6 +793,7 @@
 					isDefault: vehicleId >= 400 && vehicleId <= 611,
 					fxtTag,
 					handlingTag,
+					vehicleClass: vehicleDetails[7],
 					lines: {
 						ide: vehicleLine,
 						handling: handlingTags[handlingTag]?.line,
@@ -941,6 +1013,7 @@
 					<th>type</th>
 					<th>name</th>
 					<th>game name</th>
+					<th>class</th>
 					<th>Audio</th>
 					<th>Colors</th>
 					<th>Tuning</th>
@@ -980,6 +1053,7 @@
 						<td copy="${veh.lines.ide}">${vehicleTypeIcons[veh.type]} ${veh.type}</td>
 						<td copy="${idName}">${idName}</td>
 						<td class="${veh.gameName == null ? "missing" : ""}" title="${veh.fxtTag}\n${veh.filePaths.fxt}" copy="${veh.fxtTag}">${veh.gameName || veh.name.toUpperCase()}</td>
+						<td copy="${veh.vehicleClass}">${veh.vehicleClass}</td>
 						<td copy="${veh.lines.audio}" class="center ${veh.lines.audio == null ? "missing" : ""}">${veh.lines.audio ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carcols}" class="center ${veh.lines.carcols == null ? "missing" : ""}" title="${veh.filePaths.carcols}\n${veh.lines.carcols}">${veh.lines.carcols ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carmods}" class="center ${veh.lines.carmods == null ? "missing" : ""}" title="${veh.filePaths.carmods}\n${veh.lines.carmods}">${veh.lines.carmods ? iconsHTML.check : iconsHTML.cross}</td>
@@ -1508,6 +1582,9 @@
 				if (isShowing && filters.HasHandling != 1) {
 					if (filters.HasHandling == 0 && veh.lines.handling == null) isShowing = false;
 					else if (filters.HasHandling == 2 && veh.lines.handling != null) isShowing = false;
+				}
+				if (isShowing && filters.ClassType != "any") {
+					if (filters.ClassType != veh.vehicleClass) isShowing = false;
 				}
 
 				//display vehicle
