@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<!-- its better if i saparate it into different files but im just lazy to do so -->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Veh Manager</title>
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    		letter-spacing: 0.25px;
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+
+		.hidden { display: none; visibility: hidden; }
+		.section {
+			margin-top: 1rem;
+		}
+		.panel {
+			padding: 0.5rem 1rem;
+			border-radius: 8px;
+			background-color: #444;
+		}
+		.panel.highlight {
+			border: 1px solid #666;
+			box-shadow: 0 0 2px 0px #66666666, inset 0 0 2px #00000066;
+		}
+
+		.input {
+			padding: 0.5rem 1rem;
+			border-radius: 8px;
+			background-color: rgba(128, 128, 128, 0.2);
+			border: 0;
+			color: #ddd;
+		}
+		.input:hover {
+			background-color: rgba(128, 128, 128, 0.1);
+		}
+		.input[type="checkbox"] {
+			padding: 0.5rem;
+			border-radius: 6px;
+			appearance: none;
+		}
+		.input[type="checkbox"]:checked {
+			background-color: #66f;
+		}
+		.input:focus, .input:focus-visible, .input:focus-within,
+		details[open] > summary.input {
+			outline: 1px solid #66f;
+			outline-offset: 0px;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			z-index: 1000;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+
+		table {
+			width: 100%;
+		}
+		td, th {
+			padding: 0.5rem;
+			border-radius: 8px;
+			background-color: rgba(128, 128, 128, 0.2);
+		}
+		tbody {
+			font-family: monospace;
+		}
+
+		td.missing {
+			background-color: rgba(128, 0, 0, 0.2);
+		}
+		td.center {
+			text-align: center;
+		}
+
+		.filter-option {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.filter-option > div {
+			display: flex;
+			gap: 0.5rem;
+			background: rgba(0, 0, 0, 0.2);
+			padding: 2px;
+			border-radius: 6px;
+		}
+		.filter-option > div.icon-options > .fa-solid {
+			/* background: rgba(128, 128, 128, 0.2); */
+			padding: 1px 3px;
+			text-align: center;
+			min-width: 22.25px;
+			border-radius: 4px;
+			box-sizing: border-box;
+		}
+		.filter-option > div.icon-options > .fa-solid.active,
+		.filter-option > div.icon-options > .fa-solid:hover {
+			background-color: rgba(128, 128, 128, 0.2);
+		}
+
+		.popups {
+			display: flex;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			justify-content: center;
+			align-items: center;
+			pointer-events: none;
+		}
+		.popup {
+			display: flex;
+			background: rgb(32, 32, 32);
+			gap: 1rem;
+			border-radius: 8px;
+			padding: 1rem;
+			flex-direction: column;
+			width: 90%;
+			height: 90%;
+			pointer-events: all;
+		}
+		.popup:not(.active) {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<div id="id-status"></div>
+
+
+	<div class="section">
+		<h3>Summary</h3>
+		<div>
+			<details style="position: relative;">
+				<summary class="input" style="list-style: none;color: rgb(200,100,100);">
+					<i class="fa-solid fa-triangle-exclamation"></i>
+					<span style="font-weight: 600;" id="summary-errors-count">Errors</span>
+				</summary>
+
+				<div class="panel" style="margin-top: 0.5rem;">
+					<span id="summary-errors">No Errors</span>
+				</div>
+			</details>
+		</div>
+	</div>
+	<div class="section">
+		<h3>Actions</h3>
+		<div>
+			<button class="input" onclick="generateCheatMenu()" title="generates a file that makes custom vehicles show up in cheat menu">Generate Cheat Menu</button>
+			<button class="input" onclick="generateVehiclesTest()" title="generates info needed for vehicle test mod to load all custom vehicles">Generate Vehicles Test</button>
+			<button class="input" onclick="vehiclesOrgenizer()" title="Orgenizes vehicle lines by line type; ide, dat, etc.">Vehicles Orgenizer</button>
+			<button class="input" onclick="modifyVehiclesIds()" title="Changes a list of vehicles ids to another range">Modify Vehicles Ids</button>
+			<button class="input" onclick="vehiclesSeparator()" title="Saparates existing vehicles from new ones">Vehicles Separator</button>
+			<button class="input" onclick="modifyVehiclesName()" title="Changes names for a list of vehicles using regex">Modify Vehicles Names</button>
+		</div>
+	</div>
+	<div class="section">
+		<h3>Filters</h3>
+		<div style="display: flex;gap: 0.25rem;">
+			<input id="veh-search" class="input" placeholder="Search..." oninput="updateSearch()" style="flex-grow: 1;">
+			<details style="position: relative;">
+				<summary class="input" style="list-style: none;">
+					<i class="fa-solid fa-filter"></i>
+				</summary>
+
+				<div class="panel highlight" style="position: absolute;right: 0;margin-top: 0.5rem;width: max-content;">
+					<div class="filter-option" filter-type="select" filter-for="VehEnabled">
+						<span>Vehicle Enabled</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="SummaryType">
+						<span>Summary Type</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-triangle-exclamation" style="color: rgb(200,100,100);"></i>
+							<i class="fa-solid fa-triangle-exclamation" style="color: rgb(200,200,100);"></i>
+							<i class="fa-solid fa-minus active"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="CustomVeh">
+						<span>Custom Vehicle</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="Audio">
+						<span>Has Audio</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="Tuning">
+						<span>Has tuning</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="HasColors">
+						<span>Has Colors</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+					<div class="filter-option" filter-type="select" filter-for="HasHandling">
+						<span>Has Handling</span>
+						<div class="icon-options" filter-select>
+							<i class="fa-solid fa-check"></i>
+							<i class="fa-solid fa-minus active"></i>
+							<i class="fa-solid fa-xmark"></i>
+						</div>
+					</div>
+				</div>
+			</details>
+			<!-- filters -->
+				<!-- with errors -->
+				<!-- missing files -->
+				<!-- missing lines -->
+				<!-- ids enabled: yes/natural/no -->
+				<!-- has tuning: yes/natural/no -->
+		</div>
+	</div>
+	<table class="section" id="id-table"></table>
+
+	<div class="popups">
+		<div class="popup" id="cheatmenu-popup">
+			<span>Copy and paste in 'CheatMenuSA\data\vehicles.toml'</span>
+			<textarea class="input" id="cheatmenu-vehicles" style="height: 100%;">...</textarea>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="vehiclestest-popup">
+			<span>Copy and paste in 'cleo\Vehicles Test.ini'<br>keep everything until 'IDend = xxx' and replace whats after it.</span>
+			<textarea class="input" id="vehiclestest-vehicles" style="height: 100%;">...</textarea>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="modifyids-popup">
+			<span>Paste your vehicles ide list</span>
+			<input class="input" id="modifyids-startindex" type="number" value="19999">
+			<label style="display: flex;gap: 0.25rem;"><input id="modifyids-skipexistingids" class="input" type="checkbox" checked> Skip existing ids</label>
+			<textarea class="input" id="modifyids-vehicles" style="height: 100%;"></textarea>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="modifynames-popup">
+			<span>Paste your vehicles ide list and spesify regex and replace fields<br>this only modifies name and txd</span>
+			<input class="input" id="modifynames-from" placeholder="from...">
+			<input class="input" id="modifynames-to" placeholder="to...">
+			<button class="input" id="modifynames-update">Update</button>
+			<textarea class="input" id="modifynames-vehicles" style="height: 100%;"></textarea>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="vehiclesepartor-popup">
+			<span>Paste your vehicles ide list on the left<br>it will move existing ones to the right</span>
+			<button class="input" id="vehiclesepartor-update">Update</button>
+			<div style="display: flex;height: 100%;gap: 1rem;">
+				<textarea class="input" id="vehiclesepartor-vehicles" style="width: 100%;"></textarea>
+				<textarea class="input" id="vehiclesepartor-existing" style="width: 100%;" readonly></textarea>
+			</div>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+		<div class="popup" id="vehicleorgenizer-popup">
+			<span>Paste your vehicles lines list on the left<br>it will categorize them into the right</span>
+			<button class="input" id="vehicleorgenizer-update">Update</button>
+			<div style="display: flex;height: 100%;gap: 1rem;">
+				<textarea class="input" id="vehicleorgenizer-vehicles" style="width: 100%;"></textarea>
+				<textarea class="input" id="vehicleorgenizer-existing" style="width: 100%;"></textarea>
+			</div>
+			<button class="input" onclick="this.parentElement.classList.remove('active');">close</button>
+		</div>
+	</div>
+
+	<script>
+		"use strict";
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const idStatus = document.getElementById("id-status");
+		const idTable = document.getElementById("id-table");
+		const searchbox = document.getElementById("veh-search");
+
+		const gameGxt = "LANDSTK Landstalker\nBRAVURA Bravura\nBUFFALO Buffalo\nLINERUN Linerunner\nPEREN Perennial\nSENTINL Sentinel\nINFERNU Infernus\nDUMPER Dumper\nFIRETRK Fire Truck\nTRASHM Trashmaster\nSTRETCH Stretch\nMANANA Manana\nVOODOO Voodoo\nPONY Pony\nMULE Mule\nCHEETAH Cheetah\nAMBULAN Ambulance\nLEVIATH Leviathan\nHUNTER Hunter\nMOONBM Moonbeam\nESPERAN Esperanto\nTAXI Taxi\nWASHING Washington\nBOBCAT Bobcat\nWHOOPEE Mr. Whoopee\nBFINJC BF Injection\nPOLICAR Police\nENFORCR Enforcer\nSECURI Securicar\nBANSHEE Banshee\nPREDATR Predator\nBUS Bus\nRHINO Rhino\nBARRCKS Barracks\nHOTKNIF Hotknife\nHELI Chopper\nPREVION Previon\nCOACH Coach\nCABBIE Cabbie\nSTALION Stallion\nRUMPO Rumpo\nRCBANDT RC Bandit\nROMERO Romero\nPACKER Packer\nMONSTER Monster\nADMIRAL Admiral\nSQUALO Squalo\nSEASPAR Seasparrow\nPIZZABO Pizzaboy\nTRAM Tram\nAEROPL Air Train\nDODO Dodo\nSPEEDER Speeder\nREEFER Reefer\nTROPIC Tropic\nFLATBED Flatbed\nYANKEE Yankee\nCADDY Caddy\nSOLAIR Solair\nTOPFUN Berkley's RC Van\nSKIMMER Skimmer\nPCJ600 PCJ-600\nFAGGIO Faggio\nFREEWAY Freeway\nRCBARON RC Baron\nRCRAIDE RC Raider\nGLENDAL Glendale\nOCEANIC Oceanic\nSANCHEZ Sanchez\nSPARROW Sparrow\nPATRIOT Patriot\nQUAD Quadbike\nCOASTG Coastguard\nDINGHY Dinghy\nHERMES Hermes\nSABRE Sabre\nMUSTANG Mustang\nZR350 ZR-350\nWALTON Walton\nREGINA Regina\nCOMET Comet\nBMX BMX\nBURRITO Burrito\nCAMPER Camper\nMARQUIS Marquis\nBAGGAGE Baggage\nDOZER Dozer\nMAVERIC Maverick\nSANMAV News Chopper\nRANCHER Rancher\nFBIRANC FBI Rancher\nVIRGO Virgo\nGREENWO Greenwood\nJETMAX Jetmax\nHOTRING Hotring Racer\nSANDKIN Sandking\nBLISTAC Blista Compact\nPOLMAV Police Maverick\nBOXBURG Boxville\nBOXVILL Boxville\nBENSON Benson\nMESAA Mesa\nRCGOBLI RC Goblin\nHOTRINA Hotring Racer\nHOTRINB Hotring Racer\nBLOODRA Bloodring Banger\nBLOODRB Bloodring Banger\nSUPERGT Super GT\nELEGANT Elegant\nJOURNEY Journey\nBIKE Bike\nMTBIKE Mountain Bike\nBEAGLE Beagle\nCROPDST Cropduster\nSTUNT Stuntplane\nPETROL Tanker\nRDTRAIN Roadtrain\nNEBULA Nebula\nMAJESTC Majestic\nBUCCANE Buccaneer\nLEARJET Learjet\nHARRIER Harrier\nFCR900 FCR-900\nNRG500 NRG-500\nHPV1000 HPV1000\nCEMENT Cement Truck\nTOWTRUK Towtruck\nFORTUNE Fortune\nCADRONA Cadrona\nFBITRUK FBI Truck\nWILLARD Willard\nFORKLFT Forklift\nTRACTOR Tractor\nCOMBINE Combine Harvester\nFELTZER Feltzer\nREMING Remington\nSLAMVAN Slamvan\nBLADE Blade\nFREIGHT Freight\nSTREAK Brown Streak\nVORTEX Vortex\nVINCENT Vincent\nBULLET Bullet\nCLOVER Clover\nSADLER Sadler\nRANGER Ranger\nHUSTLER Hustler\nINTRUDR Intruder\nPRIMO Primo\nCARGOBB Cargobob\nTAMPA Tampa\nSUNRISE Sunrise\nMERIT Merit\nUTILITY Utility Van\nNEVADA Nevada\nYOSEMIT Yosemite\nWINDSOR Windsor\nMONSTA Monster\nMONSTB Monster\nURANUS Uranus\nJESTER Jester\nSULTAN Sultan\nFLAME Flame\nSTRATUM Stratum\nELEGY Elegy\nRAINDNC Raindance\nRCTIGER RC Tiger\nFLASH Flash\nTAHOMA Tahoma\nSAVANNA Savanna\nBANDITO Bandito\nFRFLAT Freight\nSTREAKC Brown Streak\nKART Kart\nMOWER Mower\nDUNE Dune\nSWEEPER Sweeper\nBROADWY Broadway\nTORNADO Tornado\nAT400 AT-400\nDFT30 DFT-30\nHUNTLEY Huntley\nSTAFFRD Stafford\nBF400 BF-400\nNEWSVAN Newsvan\nTUG Tug\nPETROTR Petrol Truck\nEMPEROR Emperor\nWAYFARE Wayfarer\nFLOAT1 Float\nHOTDOG Hotdog\nCLUB Club\nFREIBOX Freight Box\nROLLER Roller\nANDROM Andromada\nRCCAM RC Cam\nLAUNCH Launch\nTURISMO Turismo\nPICADOR Picador\nSWATVAN S.W.A.T.\nALPHA Alpha\nPHOENIX Phoenix\nGLENSHI Glendale\nEUROS Euros\nPREMIER Premier\nRUSTLER Rustler\nSHAMAL Shamal\nHYDRA Hydra\nFIRELA Fire Truck\nSADLSHI Sadler\n";
+		const ideFormatRX = /^(\d+)(?:,| |\t)(?: |\t)*(\S+)(?:,| |\t)(?: |\t)*(\S+)(?:,| |\t)/gm;
+		const vehicleIdeRx = /^#?(\d+),?\s*(\S+),?\s*(\S+),?\s*(car|mtruck|quad|heli|f_heli|plane|f_plane|boat|train|bike|bmx|trailer),?\s*(\S+),?\s*(\S+),?\s*(\S+),?\s*(normal|special|poorfamily|richfamily|executive|worker|big|taxi|moped|motorbike|leisureboat|workerboat|bicycle|ignore),?\s*\d+,?\s*\d+,?\s*(\d+x*\d*f*\d*f*\d*),?(?:\t| )*(-?\d+)?,?(?:\t| )*(\d+\.?\d*)?,?(?:\t| )*(\d+\.?\d*)?,?(?:\t| )*(-?\d+)?(?:\t| )*$/gm;
+		const handlingRx = /^([a-zA-Z0-9_]+)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-Z])(?:\t| )+([0-9A-Z])(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-Z])(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(-?\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+(\d+\.?\d*)(?:\t| )+([0-9A-fa-f]+)(?:\t| )+([0-9A-fa-f]+)(?:\t| )+([0-9A-Z])(?:\t| )+([0-9A-Z])(?:\t| )+(\d+)(?:\t| )*$/gm;
+		const fxtFormatRX = /^([a-zA-Z0-9]+) (.+)$/gm;
+		const vehicleAudioRX = /^([0-9a-zA-Z_]+)(?: |\t)+(\d+)(?: |\t)+(-?\d+)(?: |\t)+(-?\d+)(?: |\t)+(\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)+(\d+\.?\d*)(?: |\t)+(-?\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)+(-?\d+)(?: |\t)+(\d+)(?: |\t)+(\d+)(?: |\t)+(-?\d+)(?: |\t)+(-?\d+)(?: |\t)+(\d+\.?\d*)(?: |\t)*$/gm;
+		const carcolsRX = /^(\w+),\s*((?:(?: |\t|,)*\d+)+),?(?: |\t)*$/gm;
+		const carmodsRX = /^(\w+),?(?:(?:,| |\t)+(?:hydralics|stereo|nto_\w+|bnt_\w+|chss_\w+|exh_\w+|bntl_\w+|bntr_\w+|spl_\w+|wg_l_\w+|wg_r_\w+|fbb_\w+|bbb_\w+|lgt_\w+|rf_\w+|fbmp_\w+|rbmp_\w+|misc_a_\w+|misc_b_\w+|misc_c_\w+))+(?: |\t)*$/gm;
+		const carmodsUpgrades = ["nto_","bnt_","chss_","exh_","bntl_","bntr_","spl_","wg_l_","wg_r_","fbb_","bbb_","lgt_","rf_","fbmp_","rbmp_","misc_a_","misc_b_","misc_c_"]
+		const vehicleTypeIcons = {
+			car: `<i class="fa-solid fa-car-side"></i>`,
+			mtruck: `<i class="fa-solid fa-truck-monster"></i>`,
+			heli: `<i class="fa-solid fa-helicopter"></i>`,
+			boat: `<i class="fa-solid fa-sailboat"></i>`,
+			trailer: `<i class="fa-solid fa-trailer"></i>`,
+			bike: `<i class="fa-solid fa-bicycle"></i>`,
+			quad: `<i class="fa-solid fa-bicycle"></i>`,
+			bmx: `<i class="fa-solid fa-bicycle"></i>`,
+			train: `<i class="fa-solid fa-train"></i>`,
+			plane: `<i class="fa-solid fa-plane"></i>`,
+		}
+
+		const defaultVehIde = `400,	landstal, 	landstal, 	car, 		LANDSTAL, 	LANDSTK, 	null,	normal, 	10,	0,	0,		-1, 0.768, 0.768,	0
+401, 	bravura, 	bravura, 	car, 		BRAVURA, 	BRAVURA, 	null,	poorfamily,	10, 	0,	0,		-1, 0.74, 0.74,		0
+402, 	buffalo, 	buffalo, 	car, 		BUFFALO, 	BUFFALO, 	null,	executive, 	5, 	0,	0,		-1, 0.7, 0.7,		0
+403, 	linerun, 	linerun, 	car, 		LINERUN, 	LINERUN, 	truck,	worker,	 	6,	0,	0,		-1, 1.1, 1.1,		-1
+404, 	peren,		peren, 		car, 		PEREN, 		PEREN,	 	null,	poorfamily,	10, 	0,	0,		-1, 0.66, 0.66,		0
+405, 	sentinel, 	sentinel, 	car, 		SENTINEL, 	SENTINL, 	null,	richfamily, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+406, 	dumper,		dumper,	 	mtruck, 	DUMPER,		DUMPER,		truck,	worker,	 	5,	1,	0,		-1, 2.28, 2.28,		-1
+407, 	firetruk, 	firetruk, 	car, 		FIRETRUK, 	FIRETRK, 	truck,	ignore,		10,	0,	0,		-1, 1.0, 1.0,		-1
+408, 	trash,		trash,	 	car, 		TRASH, 		TRASHM,		null,	worker,	 	5,	0,	0,		-1, 1.06, 1.06,		-1
+409, 	stretch,	stretch, 	car, 		STRETCH, 	STRETCH, 	null,	executive, 	5,	0,	0,		-1, 0.75, 0.75,		0
+410, 	manana, 	manana, 	car, 		MANANA, 	MANANA, 	null,	poorfamily,	10, 	0,	0,		-1, 0.62, 0.62,		0
+411, 	infernus, 	infernus, 	car, 		INFERNUS, 	INFERNU, 	null,	executive, 	5, 	0,	0,		-1, 0.7, 0.7,		0
+412, 	voodoo, 	voodoo, 	car, 		VOODOO, 	VOODOO, 	null,	poorfamily,	10, 	0,	0,		-1, 0.7, 0.7,		0
+413, 	pony,		pony,		car, 		PONY, 		PONY, 		van,	worker,		10, 	0,	0,		-1, 0.72, 0.72,		-1
+414, 	mule, 		mule, 		car, 		MULE, 		MULE, 		null,	worker, 	10, 	0,	0,		-1, 0.76, 0.76,		-1
+415, 	cheetah, 	cheetah, 	car, 		CHEETAH, 	CHEETAH, 	null,	executive, 	5, 	0,	0,		-1, 0.68, 0.68,		0
+416, 	ambulan, 	ambulan, 	car, 		AMBULAN, 	AMBULAN, 	van,	ignore,		10,	0,	0,		-1, 0.864, 0.864,	-1
+417, 	leviathn, 	leviathn, 	heli, 		LEVIATHN, 	LEVIATH, 	null,	ignore,		5,	0,	0,		-1, 0.54, 0.4,		-1
+418, 	moonbeam, 	moonbeam, 	car, 		MOONBEAM, 	MOONBM, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+419, 	esperant, 	esperant, 	car, 		ESPERANT, 	ESPERAN, 	null,	normal,		10, 	0,	0,		-1, 0.64, 0.64,		0
+420, 	taxi, 		taxi, 		car, 		TAXI, 		TAXI, 		null,	taxi,		10, 	0,	1f10,		-1, 0.7, 0.7,		0
+421, 	washing, 	washing, 	car, 		WASHING, 	WASHING, 	null,	richfamily,	10, 	0,	0,		-1, 0.65, 0.65,		0
+422, 	bobcat, 	bobcat, 	car, 		BOBCAT, 	BOBCAT, 	null,	worker, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+423, 	mrwhoop, 	mrwhoop, 	car, 		MRWHOOP, 	WHOOPEE, 	null,	worker, 	4,	1,	0,		-1, 0.7, 0.7,		-1
+424, 	bfinject, 	bfinject, 	car, 		BFINJECT, 	BFINJC,	 	BF_injection,	executive,	6,	0,	0,		-1, 0.84, 0.92,		-1
+425, 	hunter,		hunter, 	heli, 		HUNTER, 	HUNTER,		rustler,ignore,		10,	0,	0,		-1, 0.64, 0.4,		-1
+426, 	premier, 	premier, 	car, 		PREMIER, 	PREMIER,	null,	richfamily,		10,	0,	0,		-1, 0.7, 0.7,		0
+427, 	enforcer, 	enforcer, 	car, 		ENFORCER, 	ENFORCR, 	van,	ignore,		10,	0,	0,		-1, 0.936, 0.936,	-1
+428, 	securica, 	securica, 	car, 		SECURICA, 	SECURI, 	van,	big,	 	4, 	0,	3f10,		-1, 0.914, 0.914,	-1
+429, 	banshee, 	banshee, 	car, 		BANSHEE,	BANSHEE, 	null,	executive, 	5, 	0,	0,		-1, 0.7, 0.7,		0
+430, 	predator, 	predator, 	boat,		PREDATOR,	PREDATR, 	null,	ignore,		10,	0,	0
+431, 	bus, 		bus,	 	car, 		BUS, 		BUS, 		bus,	normal,	 	5, 	0,	0,		-1, 1, 1,		-1		
+432, 	rhino, 		rhino, 		car, 		RHINO, 		RHINO, 		tank,	ignore,		10, 	0,	0,		-1, 1.3, 1.3,		-1
+433, 	barracks, 	barracks, 	car, 		BARRACKS, 	BARRCKS, 	truck,	ignore,		4, 	0,	1f10,		-1, 1.2, 1.2,		-1
+434, 	hotknife, 	hotknife, 	car, 		HOTKNIFE, 	HOTKNIF, 	null,	executive, 	4, 	0,	0,		-1, 0.72, 0.8,		-1
+435, 	artict1, 	artict1, 	trailer,	ARTICT1, 	ARTICT1, 	null,	ignore,	 	6,	0,	0,		-1, 1.1, 1.1,		-1
+436, 	previon, 	previon, 	car, 		PREVION, 	PREVION, 	null,	poorfamily,	10, 	0,	0,		-1, 0.7, 0.7,		0
+437,	coach, 		coach, 		car, 		COACH, 		COACH, 		coach,	normal,	 	5,	0,	1f10,		-1, 1.0, 1.0,		-1
+438, 	cabbie, 	cabbie, 	car, 		CABBIE, 	CABBIE, 	null,	taxi,	 	6, 	0,	1f10,		-1, 0.7, 0.7,		0
+439, 	stallion, 	stallion, 	car, 		STALLION, 	STALION, 	null,	poorfamily,	10, 	0,	3210,		-1, 0.7, 0.7,		0
+440, 	rumpo, 		rumpo, 		car, 		RUMPO, 		RUMPO, 		van,	poorfamily, 	10,	0,	0,		-1, 0.7, 0.7,		-1
+441, 	rcbandit, 	rcbandit, 	car, 		RCBANDIT, 	RCBANDT, 	null,	ignore,		1, 	0,	0,		-1, 0.25, 0.25,		-1
+442, 	romero,		romero, 	car, 		ROMERO,		ROMERO,	 	null,	normal,		4, 	0,	0,		-1, 0.68, 0.68,		0
+443, 	packer, 	packer, 	car, 		PACKER, 	PACKER, 	truck,	worker,	 	5,	0,	0,		-1, 1.082, 1.082,	-1
+444,	monster, 	monster, 	mtruck,		MONSTER, 	MONSTER, 	truck,	ignore,		1,	0,	0,		-1, 1.5, 1.5,		-1
+445, 	admiral, 	admiral, 	car, 		ADMIRAL, 	ADMIRAL, 	null,	richfamily, 	10,	0,	0,		-1, 0.68, 0.68,		0
+446, 	squalo, 	squalo, 	boat,		SQUALO,		SQUALO, 	null,	ignore,		10,	0, 	0,
+447, 	seaspar,	seaspar, 	heli, 		SEASPAR, 	SEASPAR,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,		-1
+448,	pizzaboy,	pizzaboy,	bike,		MOPED,		PIZZABO,	bikev,	normal,		4,	1,	0,		16, 0.464, 0.464,	-1
+449, 	tram, 		tram, 		train, 		TRAM,		TRAM, 		van,	ignore,		10,	0,	1012,		-1, 0.78, 0.78,		-1
+450, 	artict2, 	artict2, 	trailer,	ARTICT2, 	ARTICT2, 	null,	ignore,	 	6,	0,	0,		-1, 1.1, 1.1,		-1
+451, 	turismo, 	turismo, 	car, 		TURISMO, 	TURISMO, 	null,	executive, 	4, 	0,	0,		-1, 0.7, 0.75,		0
+452, 	speeder, 	speeder, 	boat,		SPEEDER,	SPEEDER, 	null,	leisureboat,	10,	0, 	4fff	
+453, 	reefer, 	reefer, 	boat,		REEFER,		REEFER, 	null,	workerboat,	10,	0,	3f01
+454, 	tropic, 	tropic, 	boat,		TROPIC,		TROPIC, 	null,	leisureboat,	10,	0,	4fff
+455, 	flatbed, 	flatbed, 	car, 		FLATBED, 	FLATBED, 	truck,	worker,		5, 	0,	4fff,		-1, 1.2, 1.2,		-1
+456, 	yankee, 	yankee, 	car, 		YANKEE, 	YANKEE, 	null,	worker, 	10, 	0,	0,		-1, 0.84, 0.84,		-1
+457,	caddy, 		caddy, 		car, 		GOLFCART, 	CADDY, 		null,	richfamily,	1,	0,	30123345,	-1, 0.5, 0.5,		-1
+458, 	solair, 	solair, 	car, 		SOLAIR, 	SOLAIR, 	null,	normal,		10, 	0,	0,		-1, 0.72, 0.72,		0
+459,	topfun,		topfun,		car,		TOPFUN,		TOPFUN,		van,	ignore,		1,	0,	0,		-1, 0.7, 0.7,		-1
+460, 	skimmer,	skimmer, 	plane,		SEAPLANE,	SKIMMER,	null,	ignore,		5,	0,	0
+461,	pcj600,		pcj600,		bike,		BIKE,		PCJ600,		bikes,	motorbike,	10,	0,	0,		16, 0.67, 0.67,		-1
+462,	faggio,		faggio,		bike,		MOPED,		FAGGIO,		bikev,	moped,		10,	0,	0,		16, 0.464, 0.464,	-1
+463,	freeway,	freeway,	bike,		FREEWAY,	FREEWAY,	bikeh,	motorbike,	10,	0,	0,		23, 0.654, 0.654,	-1
+464, 	rcbaron, 	rcbaron, 	plane, 		RCBARON, 	RCBARON, 	null,	ignore,		1,	0,	0,		-1, 0.25, 0.25,		-1
+465, 	rcraider, 	rcraider, 	heli, 		RCRAIDER, 	RCRAIDE, 	null,	ignore,		1,	0,	0,		-1, 0.25, 0.25,		-1
+466, 	glendale, 	glendale, 	car, 		GLENDALE, 	GLENDAL, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+467, 	oceanic, 	oceanic, 	car, 		OCEANIC, 	OCEANIC, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+468,	sanchez,	sanchez,	bike,		DIRTBIKE,	SANCHEZ,	biked,	motorbike,	5,	0,	0,		23, 0.68, 0.62,		-1
+469, 	sparrow,	sparrow, 	heli, 		SPARROW, 	SPARROW,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,		-1
+470,	patriot, 	patriot, 	car, 		PATRIOT, 	PATRIOT, 	null,	ignore,		2,	0,	0,		-1, 0.894, 0.894,	-1
+471,	quad,		quad,		quad, 		QUADBIKE, 	QUAD,	 	quad, 	normal,		4,	0,	0,		-1, 0.6, 0.6,		-1
+472, 	coastg, 	coastg, 	boat,		COASTGRD,	COASTG, 	null,	ignore,		5,	0, 	3012	
+473, 	dinghy, 	dinghy, 	boat,		DINGHY,		DINGHY, 	null,	workerboat,	7,	0, 	0
+474, 	hermes, 	hermes, 	car, 		HERMES, 	HERMES, 	null,	richfamily,	4, 	0,	0,		-1, 0.7, 0.7,		0
+475, 	sabre, 		sabre, 		car, 		SABRE,	 	SABRE, 		null,	normal,		10, 	0,	2ff0,		-1, 0.7, 0.7,		0
+476, 	rustler, 	rustler, 	plane, 		RUSTLER, 	RUSTLER,	rustler,ignore,		10,	0,	0,		-1, 0.6, 0.3,		-1
+477, 	zr350, 		zr350, 		car, 		ZR350,		ZR350, 		null,	richfamily, 	10, 	0,	0,		-1, 0.76, 0.76,		0
+478, 	walton, 	walton, 	car, 		WALTON, 	WALTON, 	null,	worker, 	6, 	0,	0,		-1, 0.7, 0.7,		0
+479, 	regina, 	regina, 	car, 		REGINA, 	REGINA, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+480,	comet,		comet,		car, 		COMET,	 	COMET, 		null,	executive, 	5, 	0,	2ff0,		-1, 0.7, 0.7,		0
+481,	bmx,		bmx,		bmx, 		BMX,	 	BMX, 		bmx,	bicycle,	5,	0,	0,		23, 0.54, 0.54,		-1
+482, 	burrito, 	burrito, 	car, 		BURRITO,	BURRITO, 	van,	normal, 	10,	0,	0,		-1, 0.7, 0.7,		-1
+483, 	camper, 	camper, 	car, 		CAMPER, 	CAMPER, 	van,	normal, 	4,	0,	0,		-1, 0.66, 0.66,		-1
+484, 	marquis, 	marquis, 	boat,		MARQUIS,	MARQUIS, 	null,	workerboat,	10,	0,	0
+485, 	baggage,	baggage,	car, 		BAGGAGE,	BAGGAGE, 	null,	normal,		4, 	0,	0,		-1, 0.6, 0.6,		-1
+486, 	dozer, 		dozer, 		car, 		DOZER, 		DOZER, 		dozer,	ignore, 	4, 	0,	0,		-1, 1.5, 1.5,		-1	
+487, 	maverick,	maverick, 	heli, 		MAVERICK,	MAVERIC,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,		-1
+488, 	vcnmav,		vcnmav, 	heli, 		COASTMAV, 	SANMAV,		null,	ignore,		6,	0,	0,		-1, 0.7, 0.7,		-1
+489,	rancher, 	rancher, 	car,		RANCHER, 	RANCHER, 	null,	normal,		10,	0,	0,		-1, 0.9, 0.9,		0
+490,	fbiranch, 	fbiranch, 	car, 		FBIRANCH, 	FBIRANC, 	null,	ignore, 	3,	0,	0,		-1, 0.92, 0.92,		-1
+491, 	virgo, 		virgo, 		car, 		VIRGO,	 	VIRGO, 		null,	normal,		10, 	0,	0,		-1, 0.65, 0.65,		0
+492, 	greenwoo, 	greenwoo, 	car, 		GREENWOO, 	GREENWO, 	null,	poorfamily,	10, 	0,	0,		-1, 0.7, 0.7,		0
+493, 	jetmax, 	jetmax, 	boat,		CUPBOAT,	JETMAX, 	null,	ignore,		8,	0, 	0	
+494,	hotring, 	hotring, 	car, 		HOTRING, 	HOTRING, 	null,	ignore, 	1,	0,	0,		-1, 0.82, 0.82,		-1
+495,	sandking, 	sandking, 	car, 		SANDKING, 	SANDKIN, 	null,	ignore, 	4,	0,	0,		-1, 0.972, 0.972,		-1
+496,	blistac, 	blistac, 	car, 		BLISTAC, 	BLISTAC, 	null,	normal, 	10,	0,	0,		-1, 0.7, 0.7,		0
+497, 	polmav,		polmav, 	heli, 		POLMAV, 	POLMAV,		null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,		-1
+498, 	boxville, 	boxville, 	car, 		BOXVILLE,	BOXVILL, 	van,	worker, 	10, 	0,	0,		-1, 0.76, 0.76,		-1
+499, 	benson, 	benson, 	car, 		BENSON,		BENSON, 	null,	worker, 	10, 	0,	0,		-1, 0.8, 0.8,		-1
+500,	mesa, 		mesa, 		car, 		MESA,	 	MESAA, 		null,	normal, 	8,	0,	0,		-1, 0.8, 0.8,		0
+501, 	rcgoblin, 	rcgoblin, 	heli, 		RCGOBLIN, 	RCGOBLI, 	null,	ignore,		1,	0,	0,		-1, 0.25, 0.25,		-1
+502,	hotrina, 	hotrina, 	car, 		HOTRING, 	HOTRINA, 	null,	ignore, 	1,	0,	4fff,		-1, 0.82, 0.82,		-1
+503,	hotrinb, 	hotrinb, 	car, 		HOTRING, 	HOTRINB, 	null,	ignore, 	1,	0,	4fff,		-1, 0.82, 0.82,		-1
+504, 	bloodra, 	bloodra, 	car, 		BLOODRA, 	BLOODRA, 	BF_injection,	ignore,		1, 	0,	4fff,		-1, 0.7, 0.7,		-1
+505,	rnchlure, 	rnchlure, 	car,		RANCHER, 	RANCHER, 	null,	normal,		10,	0,	0,		-1, 0.9, 0.9,		-1
+506, 	supergt, 	supergt, 	car, 		SUPERGT, 	SUPERGT, 	null,	executive, 	5, 	0,	0,		-1, 0.7, 0.7,		0
+507, 	elegant, 	elegant, 	car, 		ELEGANT, 	ELEGANT, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+508, 	journey, 	journey, 	car, 		JOURNEY,	JOURNEY, 	null,	worker, 	4, 	0,	0,		-1, 0.8, 0.8,		-1
+509,	bike,		bike,		bmx, 		CHOPPERB, 	BIKE, 		choppa,	bicycle,	7,	0,	0,		23, 0.526, 0.612,	-1
+510,	mtbike,		mtbike,		bmx, 		MTB,	 	MTBIKE, 	mtb,	bicycle,	7,	0,	0,		23, 0.68, 0.68,		-1
+511, 	beagle, 	beagle, 	plane, 		BEAGLE, 	BEAGLE,		van,	ignore,		10,	0,	0,		-1, 0.52, 0.52,		-1
+512, 	cropdust, 	cropdust, 	plane, 		CROPDUST, 	CROPDST,	rustler,	ignore,		6,	0,	0,		-1, 0.7, 0.3,		-1
+513, 	stunt, 		stunt, 		plane, 		STUNT,	 	STUNT,		rustler,	ignore,		6,	0,	0,		-1, 0.48, 0.48,		-1
+514, 	petro, 		petro, 		car, 		PETROL, 	PETROL, 	truck,	worker,	 	5,	0,	0,		-1, 1.106, 1.106,	-1
+515, 	rdtrain, 	rdtrain, 	car, 		RDTRAIN, 	RDTRAIN, 	truck,	worker,	 	5,	0,	0,		-1, 1.18, 1.18,		-1
+516, 	nebula, 	nebula, 	car, 		NEBULA, 	NEBULA, 	null,	poorfamily,	10, 	0,	0,		-1, 0.75, 0.75,		0
+517, 	majestic, 	majestic, 	car, 		MAJESTIC, 	MAJESTC, 	null,	poorfamily,	10, 	0,	0,		-1, 0.75, 0.75,		0
+518, 	buccanee, 	buccanee, 	car, 		BUCCANEE, 	BUCCANE, 	null,	normal,		10, 	0,	0,		-1, 0.66, 0.66,		0
+519, 	shamal, 	shamal, 	plane, 		SHAMAL, 	SHAMAL,		shamal,	ignore,		5,	0,	0,		-1, 0.62, 0.62,		-1
+520, 	hydra, 		hydra, 		plane, 		HYDRA,	 	HYDRA,		rustler,	ignore,		4,	0,	0,		-1, 0.7, 0.3,		-1
+521,	fcr900,		fcr900,		bike,		FCR900,		FCR900,		bikes,	motorbike,	6,	0,	3f341210,		16, 0.68, 0.68,		-1
+522,	nrg500,		nrg500,		bike,		NRG500,		NRG500,		bikes,	motorbike,	10,	0,	1f341210,		16, 0.68, 0.68,		-1
+523,	copbike,	copbike,	bike,		HPV1000,	HPV1000,	bikes,	ignore,		10,	0,	0,		16, 0.68, 0.68,		-1
+524, 	cement,		cement,	 	car, 		CEMENT,		CEMENT,		null,	worker,	 	4,	0,	0,		-1, 1.12, 1,		-1
+525, 	towtruck,	towtruck,	car, 		TOWTRUCK,	TOWTRUK, 	van,	worker,		5, 	0,	0,		-1, 0.92, 0.92,		-1
+526, 	fortune, 	fortune, 	car, 		FORTUNE, 	FORTUNE, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+527, 	cadrona, 	cadrona, 	car, 		CADRONA, 	CADRONA, 	null,	poorfamily,	10, 	0,	0,		-1, 0.7, 0.7,		0
+528, 	fbitruck, 	fbitruck, 	car, 		FBITRUCK, 	FBITRUK, 	van,	big,	 	4, 	0,	0,		-1, 0.85, 0.85,		-1
+529, 	willard, 	willard, 	car, 		WILLARD, 	WILLARD, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+530, 	forklift,	forklift,	car, 		FORKLIFT,	FORKLFT, 	null,	worker,		1, 	0,	0,		-1, 0.45, 0.45,		-1
+531, 	tractor,	tractor,	car, 		TRACTOR,	TRACTOR, 	null,	normal,		5, 	0,	0,		-1, 0.68, 1.3,		-1
+532, 	combine,	combine,	car, 		COMBINE, 	COMBINE,	truck,	ignore,	 	5,	0,	0,		-1, 0.588, 1,		-1
+533,	feltzer,	feltzer,	car, 		FELTZER, 	FELTZER, 	null,	executive, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+534, 	remingtn, 	remingtn, 	car, 		REMINGTN, 	REMING, 	null,	executive,	10, 	0,	0,		-1, 0.7, 0.7,		2
+535, 	slamvan, 	slamvan, 	car, 		SLAMVAN, 	SLAMVAN, 	null,	richfamily,	5, 	0,	1f10,		-1, 0.74, 0.74,		2
+536, 	blade, 		blade, 		car, 		BLADE,	 	BLADE, 		null,	executive,	7, 	0,	0,		-1, 0.7, 0.7,		2
+537, 	freight,	freight,	train, 		FREIGHT,	FREIGHT,	truck,	ignore,	 	10,	0,	0,		-1, 1.06, 1.06,		-1
+538, 	streak,		streak,	 	train, 		STREAK, 	STREAK,		truck,	ignore,	 	10,	0,	0,		-1, 1.06, 1.06,		-1
+539, 	vortex, 	vortex, 	plane, 		VORTEX,		VORTEX, 	vortex,	ignore, 	4,	0,	0,		-1, 0.7, 0.7,		-1
+540, 	vincent, 	vincent, 	car, 		VINCENT, 	VINCENT, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+541, 	bullet,		bullet,		car, 		BULLET,		BULLET, 	null,	executive,	4, 	0,	0,		-1, 0.7, 0.75,		0
+542, 	clover, 	clover, 	car, 		CLOVER,	 	CLOVER, 	null,	poorfamily,	10, 	0,	0,		-1, 0.74, 0.74,		0
+543,	sadler,		sadler,		car, 		SADLER,	 	SADLER, 	null,	normal, 	10, 	0,	0,		-1, 0.7, 0.7,		-1
+544, 	firela, 	firela, 	car, 		FIRETRUK, 	FIRELA, 	truck,	ignore,		10,	0,	0,		-1, 1.0, 1.0,		-1
+545, 	hustler, 	hustler, 	car, 		HUSTLER, 	HUSTLER, 	null,	normal,		4, 	0,	0,		-1, 0.7, 0.7,		0
+546, 	intruder, 	intruder, 	car, 		INTRUDER, 	INTRUDR, 	null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+547, 	primo, 		primo, 		car, 		PRIMO,	 	PRIMO, 		null,	normal,		10, 	0,	0,		-1, 0.7, 0.7,		0
+548, 	cargobob, 	cargobob, 	heli, 		CARGOBOB, 	CARGOBB, 	null,	ignore,		5,	0,	0,		-1, 0.74, 0.74,		-1
+549,	tampa,		tampa,		car,		TAMPA,		TAMPA,		null,	poorfamily,	10, 	0,	0,		-1, 0.684, 0.684,	0
+550, 	sunrise, 	sunrise, 	car, 		SUNRISE, 	SUNRISE, 	null,	normal,		10, 	0,	0,		-1, 0.76, 0.76,		0
+551, 	merit, 		merit, 		car, 		MERIT,	 	MERIT, 		null,	richfamily,	10, 	0,	0,		-1, 0.75, 0.75,		0
+552, 	utility,	utility,	car, 		UTILITY, 	UTILITY, 	van,	worker,		5, 	0,	0,		-1, 0.84, 0.84,		-1
+553, 	nevada, 	nevada, 	plane, 		NEVADA, 	NEVADA,		nevada,	ignore,		4,	0,	0,		-1, 0.85, 0.4,		-1
+554,	yosemite, 	yosemite, 	car, 		YOSEMITE,	YOSEMIT, 	null,	normal, 	10,	0,	0,		-1, 0.84, 0.84,		-1
+555,	windsor,	windsor,	car, 		WINDSOR, 	WINDSOR, 	null,	executive, 	4, 	0,	0,		-1, 0.7, 0.7,		0
+556,	monstera, 	monstera, 	mtruck,		MTRUCK_A, 	MONSTA, 	truck,	ignore,		1,	0,	0,		-1, 1.5, 1.5,		-1
+557,	monsterb, 	monsterb, 	mtruck,		MTRUCK_B, 	MONSTB, 	truck,	ignore,		1,	0,	0,		-1, 1.5, 1.5,		-1
+558,	uranus,		uranus,		car, 		URANUS, 	URANUS, 	null,	richfamily, 	7, 	0,	0,		-1, 0.7, 0.7,		1
+559,	jester,		jester,		car, 		JESTER, 	JESTER, 	null,	richfamily, 	7, 	0,	0,		-1, 0.7, 0.7,		1
+560,	sultan,		sultan,		car, 		SULTAN, 	SULTAN, 	null,	richfamily, 	7, 	0,	0,		-1, 0.7, 0.7,		1
+561,	stratum,	stratum,	car, 		STRATUM, 	STRATUM, 	null,	richfamily, 	7, 	0,	0,		-1, 0.7, 0.7,		1
+562,	elegy,		elegy,		car, 		ELEGY,	 	ELEGY, 		null,	richfamily, 	7, 	0,	0,		-1, 0.68, 0.68,		1
+563, 	raindanc, 	raindanc, 	heli, 		RAINDANC, 	RAINDNC, 	null,	ignore,		7,	0,	0,		-1, 0.64, 0.64,		-1
+564, 	rctiger, 	rctiger, 	car, 		RCTIGER, 	RCTIGER, 	null,	ignore,		1, 	0,	0,		-1, 0.25, 0.25,		-1
+565,	flash,		flash,		car, 		FLASH,	 	FLASH, 		null,	richfamily, 	7, 	0,	0,		-1, 0.64, 0.64,		1
+566,	tahoma,		tahoma,		car, 		TAHOMA, 	TAHOMA, 	null,	richfamily, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+567, 	savanna, 	savanna, 	car, 		SAVANNA, 	SAVANNA, 	null,	poorfamily,	7, 	0,	2ff0,		-1, 0.7, 0.7,		2
+568, 	bandito, 	bandito, 	car, 		BANDITO, 	BANDITO,	null,	ignore,		4,	0,	0,		-1, 0.55, 0.7,		-1
+569, 	freiflat,	freiflat,	train, 		FREIFLAT,	FRFLAT,		null,	ignore,	 	10,	0,	0,		-1, 1.06, 1.06,		-1
+570, 	streakc,	streakc,	train, 		CSTREAK,	STREAKC,	coach,	ignore,	 	10,	0,	0,		-1, 1.06, 1.06,		-1
+571, 	kart, 		kart, 		car, 		KART, 		KART,		KART,	ignore,		4,	0,	0,		-1, 0.26, 0.26,		-1
+572,	mower, 		mower, 		car, 		MOWER,	 	MOWER,		null,	ignore,		4,	0,	0,		-1, 0.48, 0.56,		-1
+573,	duneride, 	duneride, 	mtruck,		DUNE,	 	DUNE, 		truck,	ignore,		4,	0,	0,		-1, 1.14, 1.14,		-1
+574,	sweeper, 	sweeper, 	car, 		SWEEPER, 	SWEEPER,	null,	worker,		4,	0,	0,		-1, 0.5, 0.5,		-1
+575, 	broadway, 	broadway, 	car, 		BROADWAY, 	BROADWY, 	null,	poorfamily,	7, 	0,	2ff0,		-1, 0.7, 0.7,		2
+576, 	tornado, 	tornado, 	car, 		TORNADO, 	TORNADO, 	null,	poorfamily,	7, 	0,	2ff0,		-1, 0.7, 0.7,		2
+577, 	at400, 		at400, 		plane, 		AT400,	 	AT400,		coach,	ignore,		10,	0,	0,		-1, 1.12, 1.12,		-1
+578, 	dft30,		dft30,		car, 		DFT30,	 	DFT30, 		truck,	worker,		10, 	0,	4fff,		-1, 1, 1,		-1
+579,	huntley, 	huntley, 	car,		HUNTLEY, 	HUNTLEY, 	null,	richfamily,		6,	7,	0,	-1, 0.90, 0.90,		0
+580, 	stafford, 	stafford, 	car, 		STAFFORD, 	STAFFRD, 	null,	normal,		4, 	0,	0,		-1, 0.78, 0.78,		0
+581,	bf400,		bf400,		bike,		BF400,		BF400,		bikes,	motorbike,	10,	0,	3f341210,		16, 0.68, 0.68,		-1
+582,	newsvan,	newsvan,	car,		NEWSVAN,	NEWSVAN,	van,	normal,		4,	0,	0,		-1, 0.77, 0.77,		-1
+583,	tug, 		tug, 		car, 		TUG, 		TUG,		null,	normal,		4,	0,	0,		-1, 0.66, 0.75,		-1
+584, 	petrotr, 	petrotr, 	trailer,	PETROTR, 	PETROTR, 	null,	ignore,	 	6,	0,	0,		-1, 1.12, 1.12,		-1
+585,	emperor,	emperor, 	car, 		EMPEROR, 	EMPEROR, 	null,	normal,		10, 	0,	0,		-1, 0.74, 0.74,		0
+586,	wayfarer,	wayfarer,	bike,		WAYFARER,	WAYFARE,	wayfarer,motorbike,	6,	0,	0,		23, 0.654, 0.654,	-1
+587, 	euros,		euros,		car, 		EUROS,	 	EUROS, 		null,	richfamily, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+588, 	hotdog, 	hotdog, 	car, 		HOTDOG,		HOTDOG, 	van,	worker, 	4, 	0,	0,		-1, 0.86, 0.86,		-1
+589,	club, 		club, 		car, 		CLUB,	 	CLUB, 		null,	normal, 	8,	0,	0,		-1, 0.74, 0.74,		0
+590, 	freibox,	freibox,	train, 		FREIFLAT,	FRBOX,		null,	ignore,	 	10,	0,	0,		-1, 1.06, 1.06,		-1
+591, 	artict3, 	artict3, 	trailer,	ARTICT3, 	ARTICT3, 	null,	ignore,	 	6,	0,	0,		-1, 1.1, 1.1,		-1
+592, 	androm, 	androm, 	plane, 		ANDROM, 	ANDROM,		null,	ignore,		4,	0,	0,		-1, 0.95, 0.95,		-1
+593,	dodo,		dodo, 		plane, 		DODO,	 	DODO,		van,	ignore,		10,	0,	0,		-1, 0.56, 0.56,		-1																		
+594, 	rccam, 		rccam, 		car, 		RCCAM,	 	RCCAM, 		null,	ignore,		1, 	0,	0,		-1, 0.25, 0.25,		-1
+595, 	launch, 	launch, 	boat,		LAUNCH,		LAUNCH, 	null,	leisureboat,	10,	0, 	0	
+596, 	copcarla, 	copcarla, 	car, 		POLICE_LA, 	POLICAR,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,	-1
+597, 	copcarsf, 	copcarsf, 	car, 		POLICE_SF, 	POLICAR,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,	-1
+598, 	copcarvg,	copcarvg,	car, 		POLICE_VG, 	POLICAR,	null,	ignore,		10,	0,	0,		-1, 0.7, 0.7,	-1
+599, 	copcarru,	copcarru,	car, 		POLRANGER, 	RANGER,		null,	ignore,		10,	0,	0,		-1, 0.95, 0.95,	-1
+600,	picador,	picador,	car, 		PICADOR, 	PICADOR, 	null,	normal, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+601, 	swatvan, 	swatvan, 	car, 		SWATVAN, 	SWATVAN, 	van,	big,	 	4, 	0,	0,		-1, 1.366, 1.366,	-1
+602,	alpha,		alpha,		car, 		ALPHA,		ALPHA, 		null,	executive, 	10, 	0,	0,		-1, 0.7, 0.7,		0
+603, 	phoenix, 	phoenix, 	car, 		PHOENIX, 	PHOENIX, 	null,	normal,		7, 	0,	0,		-1, 0.7, 0.7,		0
+604, 	glenshit, 	glenshit, 	car, 		GLENDALE, 	GLENSHI, 	null,	normal,		5, 	0,	0,		-1, 0.7, 0.7,		-1
+605,	sadlshit,	sadlshit,	car, 		SADLER,	 	SADLSHI, 	null,	normal, 	10, 	0,	0,		-1, 0.7, 0.7,		-1
+606, 	bagboxa, 	bagboxa, 	trailer,	BAGBOXA, 	BAGBOXA, 	null,	ignore,	 	4,	0,	0,		-1, 0.6, 0.6,		-1
+607, 	bagboxb, 	bagboxb, 	trailer,	BAGBOXB, 	BAGBOXB, 	null,	ignore,	 	4,	0,	0,		-1, 0.6, 0.6,		-1
+608, 	tugstair, 	tugstair, 	trailer,	STAIRS, 	TUGSTAI, 	null,	ignore,	 	4,	0,	0,		-1, 0.6, 0.6,		-1
+609, 	boxburg, 	boxburg, 	car, 		BOXBURG,	BOXBURG, 	van,	worker, 	10, 	0,	0,		-1, 0.76, 0.76,		-1
+610, 	farmtr1, 	farmtr1, 	trailer,	FARM_TR1, 	FARMTR1, 	null,	ignore,	 	4,	0,	0,		-1, 0.32, 0.32,		-1
+611, 	utiltr1, 	utiltr1, 	trailer,	UTIL_TR1, 	UTILTR1, 	null,	ignore,	 	4,	0,	0,		-1, 0.68, 0.68,		-1`
+		const defaultVehAudio = `landstal                                    0             99     98     0         0.78         1.0          7         1.0          2           0          8          0           0                 0.0
+bravura                                     0             8      7      0         0.7          1.0          2         1.18921      2           0          5          0           1                 0.0
+buffalo                                     0             38     37     1         0.9          1.0          2         1.05946      2           0          7          0           2                 0.0
+linerun                                     0             84     83     0         0.0          1.0          9         0.840896     3           0          2          0           3                 6.0
+peren                                       0             95     94     0         0.78         1.0          7         1.12246      1           0          9          0           4                 0.0
+sentinel                                    0             87     86     0         0.85         1.0          3         0.943874     2           0          4          0           45                0.0
+dumper                                      0             84     83     0         0.7          0.840896     4         0.793701     3           0          2          0           6                 6.0
+firetruk                                    0             84     83     0         0.7          1.0          4         0.890899     3           0          13         3           7                 5.0
+trash                                       0             81     80     0         0.7          1.0          5         0.890899     3           0          3          0           8                 0.0
+stretch                                     0             87     86     0         0.85         1.0          2         1.0          2           0          10         0           9                 0.0
+manana                                      0             95     94     0         0.7          1.0          1         1.05946      1           0          4          0           1                 0.0
+infernus                                    0             38     37     1         0.9          1.0          8         1.12246      2           0          6          0           2                 0.0
+voodoo                                      0             46     45     0         1.0          1.0          2         1.12246      1           0          6          0           10                0.0
+pony                                        0             137    136    0         0.78         1.0          2         1.25992      4           0          1          0           11                0.0
+mule                                        0             137    136    0         0.7          1.33484      7         0.943874     4           0          2          0           11                5.0
+cheetah                                     0             103    102    1         0.9          1.0          8         1.0          2           0          5          0           2                 0.0
+ambulan                                     0             137    136    0         0.7          1.0          7         0.943874     4           0          13         3           12                0.0
+leviathn                                    4             12     -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+moonbeam                                    0             95     94     0         0.7          1.0          1         0.890899     4           0          11         0           11                0.0
+esperant                                    0             93     92     0         0.7          1.0          2         1.05946      1           0          10         0           1                 0.0
+taxi                                        0             87     86     0         0.85         1.0          5         1.12246      2           0          8          0           14                0.0
+washing                                     0             95     94     0         0.7          1.0          3         0.890899     2           0          11         0           45                0.0
+bobcat                                      0             95     94     0         0.78         1.0          7         1.0          4           0          7          0           15                0.0
+mrwhoop                                     0             79     141    0         0.7          1.0          5         0.943874     4           0          13         0           16                0.0
+bfinject                                    0             76     75     0         0.9          1.0          6         0.890899     -1          0          6          0           17                0.0
+hunter                                      4             12     -1     0         0.85         1.0          -1        1.0          0           0          3          0           13                0.0
+premier                                     0             87     86     0         0.78         1.0          8         1.0          2           0          8          0           45                0.0
+enforcer                                    0             81     80     0         0.7          1.33484      9         1.12246      3           0          13         3           18                0.0
+securica                                    0             137    136    0         0.7          1.0          4         0.890899     4           0          4          0           11                0.0
+banshee                                     0             103    102    1         1.0          1.0          3         1.05946      2           0          7          0           2                 0.0
+predator                                    3             22     21     0         0.7          1.0          -1        1.0          -1          0          7          0           19                0.0
+bus                                         0             33     32     0         0.7          1.0          5         0.840896     -1          0          10         0           20                0.0
+rhino                                       0             84     83     0         0.9          1.0          9         0.890899     3           0          13         -1          21                6.0
+barracks                                    0             81     80     0         0.7          1.0          9         0.943874     3           0          13         -1          6                 0.0
+hotknife                                    0             76     75     0         0.7          1.0          3         1.12246      1           0          1          0           17                0.0
+artict1                                     9             -1     -1     0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+previon                                     0             8      7      0         0.78         1.0          1         0.890899     2           0          8          0           1                 0.0
+coach                                       0             33     32     0         0.7          1.0          5         0.890899     -1          0          11         0           20                0.0
+cabbie                                      0             26     25     0         0.78         1.0          4         1.05946      1           0          4          0           14                0.0
+stallion                                    0             46     45     0         0.85         1.0          7         1.12246      1           0          3          0           22                0.0
+rumpo                                       0             142    141    0         0.78         1.0          1         0.840896     4           0          1          0           11                0.0
+rcbandit                                    9             36     118    0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+romero                                      0             95     94     0         0.9          1.0          5         1.12246      4           0          13         0           23                0.0
+packer                                      0             84     83     0         0.78         1.0          9         1.0          3           0          3          0           6                 6.0
+monster                                     0             71     70     0         0.9          1.0          9         1.05946      2           0          7          0           24                6.0
+admiral                                     0             87     86     0         0.85         1.0          3         1.0          2           0          8          0           45                0.0
+squalo                                      3             22     21     0         0.7          1.0          -1        1.0          -1          0          3          0           19                0.0
+seaspar                                     4             104    -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+pizzaboy                                    1             119    118    2         1.0          1.0          1         1.05946      -1          0          9          0           25                0.0
+tram                                        8             132    133    0         0.7          1.0          -1        1.0          -1          0          13         -1          26                0.0
+artict2                                     9             -1     -1     0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+turismo                                     0             103    102    1         0.9          1.0          8         1.0          2           0          5          0           2                 0.0
+speeder                                     3             22     21     0         0.7          1.0          -1        1.0          -1          0          3          0           19                0.0
+reefer                                      3             22     21     2         0.85         1.0          -1        1.0          -1          0          3          0           19                0.0
+tropic                                      3             22     21     2         0.85         1.0          -1        1.0          -1          0          9          0           19                0.0
+flatbed                                     0             81     80     0         0.7          1.0          9         0.943874     3           0          3          0           6                 0.0
+yankee                                      0             142    141    0         0.7          1.0          4         0.943874     3           0          2          0           11                0.0
+caddy                                       9             64     63     2         0.9          1.0          1         1.25992      -1          0          2          0           27                0.0
+solair                                      0             8      7      0         0.78         1.0          3         1.12246      2           0          11         0           4                 0.0
+topfun                                      0             137    136    0         0.85         1.0          2         1.05946      4           0          1          0           11                0.0
+skimmer                                     5             120    54     0         0.7          1.0          -1        1.0          0           0          8          0           42                0.0
+pcj600                                      1             125    124    2         0.7          1.18921      6         1.12246      -1          0          7          0           29                0.0
+faggio                                      1             119    118    2         1.0          1.0          1         1.05946      -1          0          10         0           25                0.0
+freeway                                     1             140    139    2         0.65         1.0          1         0.840896     -1          0          3          0           29                0.0
+rcbaron                                     9             107    106    0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+rcraider                                    9             109    108    0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+glendale                                    0             17     16     0         0.85         1.0          5         0.943874     1           0          6          0           45                0.0
+oceanic                                     0             17     16     0         0.78         1.0          2         1.0          1           0          4          0           45                0.0
+sanchez                                     1             48     47     2         0.85         1.0          6         0.890899     -1          0          2          0           29                0.0
+sparrow                                     4             104    -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+patriot                                     0             99     98     0         0.9          1.18921      9         1.25992      4           0          3          0           0                 0.0
+quad                                        0             48     47     2         0.3          1.0          1         1.0          -1          0          2          0           30                0.0
+coastg                                      3             22     21     0         0.7          1.0          -1        1.0          -1          0          13         3           19                0.0
+dinghy                                      3             22     21     2         0.9          1.0          -1        1.0          -1          0          8          0           43                0.0
+hermes                                      0             35     34     0         1.0          1.0          4         1.05946      1           0          6          0           1                 0.0
+sabre                                       0             46     45     0         0.85         1.0          8         0.943874     1           0          10         0           1                 0.0
+rustler                                     5             53     54     0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+zr350                                       0             8      7      1         0.9          1.0          3         1.12246      2           0          5          0           31                0.0
+walton                                      0             89     88     0         0.65         1.0          2         0.943874     4           0          2          0           15                0.0
+regina                                      0             95     94     0         0.65         1.0          7         1.18921      2           0          9          0           4                 0.0
+comet                                       0             103    102    1         0.9          1.0          8         1.12246      2           0          8          0           2                 0.0
+bmx                                         2             19     18     2         0.7          1.0          0         1.0          -1          0          13         1           41                0.0
+burrito                                     0             137    136    0         0.78         1.0          7         1.12246      4           0          6          0           11                0.0
+camper                                      0             142    141    0         0.7          1.0          2         1.12246      4           0          9          0           44                0.0
+marquis                                     3             22     21     0         0.7          1.0          -1        1.0          -1          0          3          0           19                0.0
+baggage                                     0             11     10     2         1.0          1.0          1         1.12246      -1          0          9          0           6                 0.0
+dozer                                       0             89     88     0         0.7          1.0          9         1.0          -1          0          13         -1          32                0.0
+maverick                                    4             85     -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+vcnmav                                      4             85     -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+rancher                                     0             99     98     0         0.85         1.0          5         0.943874     2           0          3          0           0                 0.0
+fbiranch                                    0             99     98     0         0.7          1.0          5         1.0          2           0          13         3           0                 0.0
+virgo                                       0             95     94     0         0.7          1.0          3         0.943874     2           0          4          0           1                 0.0
+greenwoo                                    0             95     94     0         0.85         1.0          7         1.12246      2           0          6          0           45                0.0
+jetmax                                      3             22     21     1         0.85         1.0          -1        1.0          -1          0          3          0           19                0.0
+hotring                                     0             38     37     0         0.9          1.0          3         1.12246      2           0          7          0           2                 0.0
+sandking                                    0             99     98     0         0.7          1.18921      5         0.943874     2           0          3          0           0                 0.0
+blistac                                     0             93     92     0         0.78         1.0          8         1.12246      2           0          5          0           31                0.0
+polmav                                      4             85     -1     0         0.7          1.0          -1        1.0          0           0          13         3           13                0.0
+boxville                                    0             142    141    0         0.7          1.0          3         0.840896     3           0          6          0           11                0.0
+benson                                      0             84     83     0         0.65         1.33484      2         0.943874     3           0          2          0           11                3.0
+mesa                                        0             8      7      0         0.85         1.0          6         1.0          2           0          11         0           0                 0.0
+rcgoblin                                    9             109    108    0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+hotrina                                     0             38     37     0         0.9          1.0          3         0.943874     2           0          3          0           2                 0.0
+hotrinb                                     0             101    100    0         0.9          1.0          7         1.12246      2           0          7          0           2                 0.0
+bloodra                                     0             71     70     0         0.7          1.0          2         0.943874     1           0          2          0           1                 0.0
+rnchlure                                    0             99     98     0         0.7          1.0          5         0.943874     2           0          3          0           0                 0.0
+supergt                                     0             103    102    1         0.9          1.0          4         1.0          2           0          8          0           2                 0.0
+elegant                                     0             87     86     0         0.7          1.0          7         1.18921      2           0          11         0           45                0.0
+journey                                     0             137    136    0         0.65         1.0          4         1.18921      0           0          9          0           44                0.0
+bike                                        2             19     18     2         0.7          1.0          0         1.0          -1          0          13         1           41                0.0
+mtbike                                      2             19     18     2         0.7          1.0          0         1.0          -1          0          13         1           41                0.0
+beagle                                      5             134    135    0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+cropdust                                    5             120    54     0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+stunt                                       5             53     54     0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+petro                                       0             84     83     0         0.85         1.0          9         0.793701     3           0          3          0           3                 6.0
+rdtrain                                     0             84     83     0         0.78         1.0          9         0.840896     3           0          2          0           3                 6.0
+nebula                                      0             8      7      0         0.7          1.0          4         1.25992      2           0          10         0           45                0.0
+majestic                                    0             93     92     0         0.78         1.0          8         1.12246      2           0          4          0           1                 0.0
+buccanee                                    0             46     45     0         0.7          1.0          3         1.0          1           0          1          0           1                 0.0
+shamal                                      5             -1     -1     0         0.85         1.0          -1        1.0          0           0          3          0           28                0.0
+hydra                                       5             -1     -1     0         0.78         1.0          -1        1.0          0           0          3          0           28                0.0
+fcr900                                      1             115    114    2         0.78         1.05946      7         1.25992      -1          0          7          0           29                0.0
+nrg500                                      1             125    124    2         0.65         1.0          6         1.18921      -1          0          5          0           29                0.0
+copbike                                     1             41     40     2         0.9          1.0          6         1.0          -1          0          13         3           29                0.0
+cement                                      0             84     83     0         0.65         1.0          4         0.943874     3           0          3          0           6                 0.0
+towtruck                                    0             137    136    0         0.7          1.0          4         1.0          4           0          3          0           6                 0.0
+fortune                                     0             26     25     0         0.78         1.0          3         0.943874     2           0          8          0           1                 0.0
+cadrona                                     0             8      7      0         0.78         1.0          8         1.0          2           0          4          0           1                 0.0
+fbitruck                                    0             81     80     0         0.7          1.18921      5         0.943874     4           0          13         3           18                0.0
+willard                                     0             26     25     0         0.7          1.0          2         1.18921      2           0          1          0           45                0.0
+forklift                                    0             58     57     2         1.0          1.0          1         1.05946      -1          0          13         1           33                0.0
+tractor                                     0             89     88     2         0.65         1.0          7         0.890899     -1          0          13         -1          34                0.0
+combine                                     0             69     68     0         0.7          1.0          4         0.840896     0           0          2          0           35                0.0
+feltzer                                     0             93     92     0         0.85         1.0          2         1.18921      2           0          6          0           22                0.0
+remingtn                                    0             35     34     0         0.9          1.0          3         1.05946      1           0          6          0           10                0.0
+slamvan                                     0             76     75     0         1.0          1.0          7         1.12246      2           0          1          0           10                0.0
+blade                                       0             46     45     0         0.9          1.0          2         1.18921      1           1          6          0           10                0.0
+freight                                     8             132    131    0         0.7          1.0          -1        1.0          3           0          13         -1          39                0.0
+streak                                      8             132    131    0         0.7          1.0          -1        1.0          3           0          13         -1          39                0.0
+vortex                                      9             78     77     0         0.85         1.0          -1        1.0          -1          0          7          0           40                0.0
+vincent                                     0             26     25     0         0.85         1.0          3         0.943874     2           0          1          0           45                0.0
+bullet                                      0             17     16     1         1.0          1.18921      2         1.25992      2           0          5          0           2                 0.0
+clover                                      0             46     45     0         0.65         1.0          7         1.18921      1           0          9          0           1                 0.0
+sadler                                      0             95     94     0         0.78         1.0          7         1.05946      1           0          7          0           15                0.0
+firela                                      0             84     83     0         0.7          1.0          9         0.943874     3           0          13         3           7                 5.0
+hustler                                     0             76     75     0         0.85         1.0          8         0.943874     1           0          3          0           1                 0.0
+intruder                                    0             26     25     0         0.78         1.0          3         0.890899     2           0          8          0           45                0.0
+primo                                       0             8      7      0         0.7          1.0          1         0.943874     2           0          4          0           45                0.0
+cargobob                                    4             12     -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+tampa                                       0             95     94     0         0.65         1.0          2         0.943874     1           0          9          0           1                 0.0
+sunrise                                     0             26     25     0         0.7          1.0          8         0.943874     2           0          8          0           45                0.0
+merit                                       0             8      7      0         0.78         1.0          6         0.840896     2           0          11         0           45                0.0
+utility                                     0             137    136    0         0.65         1.0          7         1.12246      4           0          2          0           11                0.0
+nevada                                      5             134    135    0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+yosemite                                    0             26     25     0         0.85         1.0          7         1.05946      2           0          3          0           15                0.0
+windsor                                     0             101    100    0         0.78         1.0          2         1.25992      1           0          10         0           1                 0.0
+monstera                                    0             71     70     1         0.9          1.18921      9         1.05946      2           0          3          0           24                6.0
+monsterb                                    0             71     70     1         0.9          1.18921      9         1.12246      2           0          7          0           24                6.0
+uranus                                      0             8      7      0         0.85         1.0          8         1.05946      2           2          3          0           31                0.0
+jester                                      0             93     92     1         0.9          1.0          3         1.12246      2           2          8          0           31                0.0
+sultan                                      0             87     86     0         1.0          1.0          7         1.18921      2           2          6          0           45                0.0
+stratum                                     0             87     86     0         0.78         1.0          3         1.05946      2           2          4          0           4                 0.0
+elegy                                       0             8      7      0         0.85         1.0          3         1.12246      2           2          8          0           1                 0.0
+raindanc                                    4             12     -1     0         0.7          1.0          -1        1.0          0           0          3          0           13                0.0
+rctiger                                     9             113    112    0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+flash                                       0             93     92     0         0.9          1.0          2         1.25992      2           2          5          0           31                0.0
+tahoma                                      0             93     92     0         0.85         1.0          3         0.943874     2           0          1          0           45                0.0
+savanna                                     0             46     45     0         0.9          1.0          7         0.943874     1           1          6          0           10                0.0
+bandito                                     0             115    114    0         0.7          1.0          7         1.25992      -1          0          13         -1          17                0.0
+freiflat                                    8             132    131    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+streakc                                     8             132    131    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+kart                                        0             62     61     2         0.78         1.0          1         1.12246      -1          0          7          0           36                0.0
+mower                                       0             62     61     2         0.9          1.0          1         0.943874     -1          0          2          0           37                0.0
+duneride                                    0             81     80     0         0.7          1.18921      4         0.890899     3           0          9          0           0                 0.0
+sweeper                                     0             127    126    2         0.85         1.0          5         1.18921      4           0          1          0           11                0.0
+broadway                                    0             35     34     0         0.9          1.0          3         0.890899     1           1          10         0           10                0.0
+tornado                                     0             17     16     0         0.78         1.0          5         1.12246      1           1          6          0           10                0.0
+at400                                       5             -1     -1     0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+dft30                                       0             33     32     0         0.78         1.0          4         0.840896     3           0          1          0           6                 0.0
+huntley                                     0             99     98     0         0.78         1.0          7         1.0          2           0          11         0           0                 0.0
+stafford                                    0             87     86     1         0.85         1.0          2         0.890899     2           0          11         0           45                0.0
+bf400                                       1             125    124    2         0.78         1.0          6         0.890899     -1          0          1          0           29                0.0
+newsvan                                     0             137    136    0         0.7          1.0          4         1.05946      4           0          11         0           11                0.0
+tug                                         0             11     10     2         0.65         1.0          1         0.840896     4           0          3          0           11                0.0
+petrotr                                     9             -1     -1     0         0.7          1.0          -1        1.0          3           0          13         1           -1                0.0
+emperor                                     0             87     86     0         0.78         1.0          8         1.0          2           0          8          0           45                0.0
+wayfarer                                    1             41     40     2         0.3          0.890899     7         1.18921      -1          0          2          0           29                0.0
+euros                                       0             8      7      0         0.85         1.0          5         1.25992      2           0          9          0           31                0.0
+hotdog                                      0             142    141    0         0.65         1.0          4         0.943874     4           0          3          0           11                0.0
+club                                        0             93     92     0         1.0          1.0          6         0.943874     2           0          5          0           31                0.0
+freibox                                     8             132    131    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+artict3                                     9             -1     -1     0         0.7          1.0          -1        1.0          -1          0          13         1           -1                0.0
+androm                                      5             -1     -1     0         0.7          1.0          -1        1.0          0           0          3          0           -1                0.0
+dodo                                        5             120    54     0         0.7          1.0          -1        1.0          0           0          3          0           28                0.0
+rccam                                       10            -1     -1     0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+launch                                      3             22     21     0         0.7          1.0          -1        1.0          -1          0          13         3           19                0.0
+copcarla                                    0             87     86     0         0.7          1.0          2         1.05946      2           0          13         3           38                0.0
+copcarsf                                    0             87     86     0         0.7          1.0          2         1.05946      2           0          13         3           38                0.0
+copcarvg                                    0             87     86     0         0.7          1.0          7         1.05946      2           0          13         3           38                0.0
+copcarru                                    0             99     98     0         0.7          1.0          4         1.05946      2           0          13         3           38                0.0
+picador                                     0             26     25     0         0.7          1.0          7         1.12246      2           0          6          0           15                0.0
+swatvan                                     0             81     80     0         0.7          1.0          9         0.943874     3           0          13         3           18                0.0
+alpha                                       0             38     37     0         0.85         1.0          3         1.0          2           0          6          0           31                0.0
+phoenix                                     0             101    100    0         0.9          1.0          8         1.05946      1           0          1          0           2                 0.0
+glenshit                                    0             17     16     0         0.65         1.0          5         1.05946      1           0          1          0           45                0.0
+sadlshit                                    0             95     94     0         0.65         1.0          7         1.05946      1           0          3          0           15                0.0
+bagboxa                                     10            130    129    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+bagboxb                                     10            130    129    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+tugstair                                    10            130    129    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+boxburg                                     0             137    136    0         0.7          1.0          3         0.840896     -1          0          6          0           -1                0.0
+farmtr1                                     10            130    129    0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0
+utiltr1                                     10            -1     -1     0         0.7          1.0          -1        1.0          -1          0          13         -1          -1                0.0`;
+		const defaultVehCols = `admiral, 34,34, 35,35, 37,37, 39,39, 41,41, 43,43, 45,45, 47,47
+alpha, 58,1, 69,1, 75,77, 18,1, 32,1, 45,45, 13,1, 34,1
+ambulan, 1,3
+androm, 1,1
+artict1, 1,1
+artict2, 1,1
+artict3, 1,1
+at400, 1,3, 8,7, 8,10, 8,16, 23,31, 40,44
+baggage, 1,73, 1,74, 1,75, 1,76, 1,77, 1,78, 1,79
+bandito, 2,39, 9,39, 17,1, 21,1, 33,0, 37,0, 41,29, 56,29
+banshee, 12,12, 13,13, 14,14, 1,2, 2,1, 1,3, 3,1, 10,10
+barracks, 43,0
+beagle, 3,90, 4,90, 7,68, 8,66, 12,60, 27,97, 34,51, 37,51
+benson,  109,25, 109,32, 112,32, 10,32, 30,44, 32,52, 84,66, 84,69
+bf400, 54,1, 58,1, 66,1, 72,1, 75,1, 87,1, 101,1, 36,1
+bfinject, 1,0, 2,2, 3,2, 3,6, 6,16, 15,30, 24,53, 35,61
+bike, 7,1, 74,1, 61,1, 16,1, 25,1, 30,1, 36,1, 53,1
+blade, 9,1, 12,1, 26,96, 30,96, 32,1, 37,1, 57,96, 71,96
+blistac, 74,72, 66,72, 53,56, 37,19, 22,22, 20,20, 9,14, 0,0
+bloodra, 51,39, 57,38, 45,29, 34,9, 65,9, 14,1, 12,9, 26,1
+bmx, 1,1, 3,3, 6,6, 46,46, 65,9, 14,1, 12,9, 26,1
+bobcat, 96,25, 97,25, 101,25, 111,31, 113,36, 83,57, 67,59
+boxburg, 36,36
+boxville, 11,123, 13,120, 20,117, 24,112, 27,107, 36,105, 37,107, 43,93
+bravura, 41,41, 47,47, 52,52, 66,66, 74,74, 87,87,91,91, 113,113
+broadway, 12,1, 19,96, 31,64, 25,96, 38,1, 51,96, 57,1, 66,96
+buccanee, 2,39, 9,39, 17,1, 21,1, 33,0, 37,0, 41,29, 56,29
+buffalo, 10,10, 13,13, 22,22, 30,30, 39,39, 90,90, 98,98, 110,110
+bullet, 51,1, 58,8, 60,1, 68,8, 2,1, 13,8, 22,1, 36,8
+burrito, 41,41, 48,48, 52,52, 64,64, 71,71, 85,85, 10,10, 62,62
+bus, 71,59, 75,59, 92,72, 47,74, 55,83, 59,83, 71,87, 82,87
+cabbie, 6,76
+caddy, 58,1, 2,1, 63,1, 18,1, 32,1, 45,1, 13,1, 34,1
+cadrona, 52,1, 53,1, 66,1, 75,1, 76,1, 81,1, 95,1, 109,1
+cargobob, 1,1
+cheetah,  20,1, 25,1, 36,1, 40,1 62,1, 75,1, 92,1, 0,1
+clover, 13,118, 24,118, 31,93, 32,92, 45,92, 113,92, 119,113, 122,113
+club, 37,37, 31,31, 23,23, 22,22, 7,7, 124,124, 114,114, 112,112
+coach,   54,7, 79,7, 87,7, 95,16, 98,20, 105,20, 123,20, 125,21
+coastg, 56,15, 56,53
+comet, 73,45, 12,12, 2,2, 6,6, 4,4, 46,46, 53,53
+copcarla, 0,1
+copcarsf, 0,1
+copcarvg, 0,1
+copcarru, 0,1
+cropdust, 17,39, 15,123, 32,112, 45,88, 52,71, 57,67, 61,96, 96,96
+dft30, 1,1
+dinghy, 56,15, 56,53
+dodo, 51,1, 58,8, 60,1, 68,8, 2,1, 13,8, 22,1, 36,8
+dozer, 1,1
+dumper, 1,1
+duneride, 91,38, 115,43, 85,6, 79,7, 78,8, 77,18, 79,18, 86,24
+elegant, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+elegy, 36,1, 35,1, 17,1, 11,1, 116,1, 113,1, 101,1, 92,1
+emperor, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+enforcer, 0,1
+esperant, 45,75, 47,76, 33,75, 13,76, 54,75, 69,76, 59,75, 87,76
+euros, 36,1, 40,1, 43,1, 53,1, 72,1, 75,1, 95,1, 101,1
+faggio, 12,12, 13,13, 14,14, 1,2, 2,1, 1,3, 3,1, 10,10
+fbiranch, 0,0
+fcr900, 74,74, 75,13, 87,118, 92,3, 115,118, 25,118, 36,0, 118,118
+feltzer, 73,1, 74,1, 75,1, 77,1, 79,1, 83,1, 84,1, 91,1
+firela, 3,1
+firetruk, 3,1
+flash, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+flatbed, 84,15, 84,58, 84,31, 32,74, 43,31, 1,31, 77,31, 32,74
+forklift, 110,1, 111,1, 112,1, 114,1, 119,1, 122,1, 4,1, 13,1
+fortune, 2,39, 9,39, 17,1, 21,1, 33,0, 37,0, 41,29, 56,29
+freeway, 79,79, 84,84, 7,7, 11,11, 19,19, 22,22, 36,36, 53,53
+freight, 1,1
+glendale, 67,76, 68,76, 78,76, 2,76, 16,76, 18,76, 25,76, 45,88
+glenshit, 67,76, 68,76, 78,76, 2,76, 16,76, 18,76, 25,76, 45,88
+greenwoo, 30,26, 77,26, 81,27, 24,55, 28,56, 49,59, 52,69, 71,107
+hermes, 97,1, 81,1, 105,1, 110,1, 91,1, 74,1, 84,1, 83,1
+hotdog, 1,1
+hotknife, 1,1, 12,12, 2,2, 6,6, 4,4, 46,46, 53,53
+hotrina, 7,94, 36,88, 51,75, 53,75 ,58,67, 75,67, 75,61, 79,62
+hotrinb, 83,66, 87,74, 87,75, 98,83, 101,100, 103,101, 117,116, 123,36
+hotring, 36,117, 36,13, 42,30, 42,33, 54,36, 75,79, 92,101, 98,109
+hunter, 43,0
+huntley, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+hustler, 50,1, 47,1, 44,96, 40,96, 39,1, 30,1, 28,96, 9,96
+infernus, 12,1, 64,1, 123,1, 116,1, 112,1, 106,1, 80,1, 75,1
+intruder, 62,37, 78,38, 2,62, 3,87, 2,78, 113,78, 119,62, 7,78
+jester, 51,1, 58,8, 60,1, 68,8, 2,1, 13,8, 22,1, 36,8
+jetmax, 36,13
+journey, 1,1
+kart, 2,35, 36,2, 51,53, 91,2, 11,22, 40,35
+landstal, 4,1, 123,1, 113,1, 101,1, 75,1, 62,1, 40,1, 36,1
+launch, 112,20
+linerun, 36,1, 37,1, 30,1, 28,1, 25,1, 40,1, 101,1, 113,1
+quad, 120,117, 103,111, 120,114, 74,91, 120,112, 74,83, 120,113, 66,71
+majestic, 37,36, 36,36, 40,36, 43,41, 47,41, 51,72, 54,75, 55,84
+mtbike, 43,43, 46,46, 39,39, 28,28, 16,16, 6,6, 5,5, 2,2
+manana, 4,1, 9,1, 10,1, 25,1, 36,1, 40,1, 45,1, 84,1
+marquis, 12,35, 50,32, 40,26, 66,36
+maverick, 26,14, 29,42, 26,57, 54,29, 26,3, 3,29, 12,39, 74,35
+merit, 67,1, 72,1, 75,1, 83,1, 91,1, 101,1, 109,1, 20,1
+mesa, 75,84, 40,84, 40,110, 28,119, 25,119, 21,119, 13,119, 4,119
+monster, 32,36, 32,42, 32,53, 32,66, 32,14, 32,32
+monstera, 1,1
+monsterb, 1,1
+moonbeam, 119,119, 117,227, 114,114, 108,108, 95,95, 81,81, 61,61, 41,41
+mower, 94,1, 101,1, 116,1, 117,1, 4,1, 25,1, 30,1, 37,1
+mrwhoop, 1,16, 1,56, 1,17, 1,53, 1,5, 1,35
+mule, 25,1, 28,1, 43,1, 67,1, 72,1, 9,1, 95,1, 24,1
+nebula, 116,1, 119,1, 122,1, 4,1, 9,1, 24,1, 27,1, 36,1
+nevada, 38,9, 55,23, 61,74, 71,87, 91,87, 98,114, 102,119, 111,3
+newsvan, 41,10, 41,20, 49,11, 56,123, 110,113, 112,116, 114,118, 119,101
+nrg500, 3,3, 3,8, 6,25, 7,79, 8,82, 36,105, 39,106, 51,118
+oceanic, 51,1, 58,8, 60,1, 68,8, 2,1, 13,8, 22,1, 36,8
+packer, 4,1, 20,1, 24,1, 25,1, 36,1, 40,1, 54,1, 84,1
+patriot, 43,0
+pcj600, 36,1, 37,1, 43,1, 53,1, 61,1, 75,1, 79,1, 88,1
+peren, 113,39, 119,50, 123,92, 109,100, 101,101, 95,105, 83,110, 66,25
+petro, 10,1, 25,1, 28,1, 36,1, 40,1, 54,1, 75,1, 113,1
+petrotr, 1,1
+phoenix, 58,1, 69,1, 75,77, 18,1, 32,1, 45,45, 13,1, 34,1
+picador, 81,8, 32,8, 43,8, 67,8, 11,11, 8,90, 2,2, 83,13
+pizzaboy,3,6
+polmav, 0,1
+pony, 87,1, 88,1, 91,1, 105,1, 109,1, 119,1, 4,1, 25,1
+predator, 46,26
+premier, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+previon, 83,1, 87,1, 92,1, 95,1, 109,1, 119,45, 11,1,
+primo, 122,1, 123,1, 125,1, 10,1, 24,1, 37,1, 55,1, 66,1
+raindanc, 1,6
+rancher, 13,118, 14,123, 120,123, 112,120, 84,110, 76,102
+rcbandit, 2,96, 79,42, 82,54, 67,86, 126,96, 70,96, 110,54, 67,98
+rcbaron, 14,75
+rcraider, 14,75
+rcgoblin, 14,75
+rdtrain, 13,76, 24,77, 63,78, 42,76, 54,77, 39,78, 11,76, 62,77
+reefer, 56,56
+regina, 27,36, 59,36, 60,35, 55,41, 54,31, 49,23, 45,32, 40,29
+remingtn, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+rhino, 43,0
+rnchlure, 13,118, 14,123, 120,123, 112,120, 84,110, 76,102
+romero, 0,0, 11,105, 25,109, 36,0, 40,36, 75,36, 0,36, 0,109
+rumpo, 34,34, 32,32, 20,20, 110,110, 66,66, 84,84, 118,118, 121,121
+rustler, 6,7, 7,6, 1,6, 89,91, 119,117, 103,102, 77,87, 71,77
+sabre, 2,39, 9,39, 17,1, 21,1, 33,0, 37,0, 41,29, 56,29
+sadler, 76,8, 32,8, 43,8, 67,8, 11,11, 8,90, 2,2, 83,13
+sadlshit, 61,8, 32,8, 43,8, 67,8, 11,11, 8,90, 2,2, 83,13
+sanchez, 6,6, 46,46, 53,53, 3,3
+sandking, 123,124, 119,122, 118,117, 116,115, 114,108, 101,106, 88,99, 5,6
+savanna, 97,96, 88,64, 90,96, 93,64, 97,96, 99,81, 102,114, 114,1
+seaspar, 75,2
+securica, 4,75
+sentinel, 11,1, 24,1, 36,1, 40,1, 75,1, 91,1, 123,1, 4,1
+shamal, 1,1
+streak, 1,1
+streakc, 1,1
+skimmer, 1,3, 1,9, 1,18, 1,30, 17,23, 46,23, 46,32, 57,34
+slamvan, 3,1, 28,1, 31,1, 55,1, 66,1 97,1, 123,1, 118,1
+solair, 91,1, 101,1, 109,1, 113,1, 4,1, 25,1, 30,1, 36,1
+sparrow, 1,3
+speeder, 1,3, 1,5, 1,16, 1,22, 1,35, 1,44, 1,53, 1,57
+stafford, 92,92, 81,81, 67,67, 66,66, 61,61, 53,53, 51,51, 47,47, 43,43
+stallion, 57,8, 8,17, 43,21, 54,38, 67,8, 37,78, 65,79, 25,78
+stratum, 57,8, 8,17, 43,21, 54,38, 67,8, 37,78, 65,79, 25,78
+stretch, 1,1
+stunt, 38,51, 21,36, 21,34, 30,34, 54,34, 55,20, 48,18, 51,6
+sultan, 52,39, 9,39, 17,1, 21,1, 33,0, 37,0, 41,29, 56,29
+sunrise, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+supergt, 3,3, 6,6, 7,7, 52,52, 76,76
+swatvan, 1,1
+sweeper, 26,26
+tahoma, 109,1, 30,8, 95,1, 84,8, 83,1, 72,8, 71,1, 52,8
+tampa, 74,39, 72,39, 75,39, 79,39, 83,36, 84,36, 89,35, 91,35
+taxi, 6,1
+topfun, 26,26, 28,28, 44,44, 51,51, 57,57, 72,72, 106,106, 112,112
+tornado, 67,1, 68,96, 72,1, 74,8, 75,96, 76,8, 79,1, 84,96
+towtruck, 1,1, 17,20, 18,20, 22,30, 36,43, 44,51, 52,54
+tractor, 2,35, 36,2, 51,53, 91,2, 11,22, 40,35
+tram, 1,74
+trash, 26,26
+tropic, 26,26
+tug, 1,1
+tugstair, 1,1
+turismo, 123,123, 125,125, 36,36, 16,16, 18,18, 46,46, 61,61, 75,75
+uranus, 112,1, 116,1, 117,1, 24,1, 30,1, 35,1, 36,1, 40,1
+utility, 56,56, 49,49, 26,124
+vcnmav, 2,26, 2,29
+vincent, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+virgo, 40,65, 71,72, 52,66, 64,72, 30,72, 60,72
+voodoo, 9,1, 10,8, 11,1, 25,8, 27,1, 29,8, 30,1, 37,8
+vortex, 96,67, 86,70, 79,74, 70,86, 61,98, 75,75, 75,91
+walton, 72,1, 66,1, 59,1, 45,1, 40,1, 39,1, 35,1, 20,1
+washing, 4,1, 13,1, 25,1, 30,1, 36,1, 40,1, 75,1, 95,1
+wayfarer, 119,1, 122,1, 8,1, 10,1, 13,1, 25,1, 27,1, 32,1
+willard, 37,37, 42,42, 53,53, 62,62, 7,7, 10,10, 11,11, 15,15
+windsor, 51,1, 58,1, 60,1, 68,1, 2,1, 13,1, 22,1, 36,1
+yankee, 84,63, 91,63, 102,65, 105,72, 110,93, 121,93, 12,95, 23,1
+yosemite, 53,32, 15,32, 45,32, 34,30, 65,32, 14,32, 12,32, 43,32
+zr350, 92,1, 94,1, 101,1, 121,1, 0,1, 22,1, 36,1, 75,1 
+camper, 1,31,1,0, 1,31,1,0, 1,20,3,0, 1,5,0,0, 0,6,3,0, 3,6,3,0, 16,0,8,0, 17,0,120,0 
+cement, 60,24,23,0, 61,27,123,0, 65,31,31,0, 61,61,30,0, 81,35,23,0, 62,61,62,0, 83,66,64,0, 83,64,64,0
+squalo, 0,0,0,1, 1,5,1,1, 3,3,0,1, 1,22,1,1, 1,35,1,1, 1,44,1,1, 1,53,1,1, 1,57,1,1`;
+
+
+		/** @typedef {{
+		 * id: number;
+		 * type: "car"|"mtruck"|"heli"|"boat"|"trailer"|"bike"|"quad"|"bmx"|"train"|"plane";
+		 * name: string;
+		 * gameName: string;
+		 * isDisabled: boolean;
+		 * isDefault: boolean;
+		 * fxtTag: string;
+		 * handlingTag: string;
+		 * lines: {
+		 * 		ide: string;
+		 * 		handling: string;
+		 * 		audio: string;
+		 * 		carmods: string;
+		 * 		carcols: string;
+		 * };
+		 * filePaths: {
+		 * 		ide: string;
+		 * 		dff: string;
+		 * 		txd: string;
+		 * 		handling: string;
+		 * 		carmods: string;
+		 * 		carcols: string;
+		 * 		fxt: string;
+		 * };
+		 * summary: {
+		 * 		errors: string[];
+		 * 		warnings: string[];
+		 * };
+		 * }} Vehicle */
+		const VehicleUpdate = {
+			tags() {
+				vehiclesList.filter(veh => veh.gameName == null).forEach(veh => {
+					let fxtData = fxtTags[veh.fxtTag];
+					if (!fxtData) return;
+
+					veh.gameName = fxtData.text;
+					veh.filePaths.fxt = fxtData.fullPath;
+				});
+			},
+			handlings() {
+				vehiclesList.filter(veh => veh.lines.handling == null).forEach(veh => {
+					let handlingLine = handlingTags[veh.handlingTag];
+					if (!handlingLine) return;
+
+					veh.lines.handling = handlingLine.line;
+					veh.filePaths.handling = handlingLine.fullPath;
+				});
+			},
+			carcols() {
+				vehiclesList.filter(veh => veh.lines.carcols == null).forEach(veh => {
+					let carcolsLine = carcolsLines[veh.name];
+					if (!carcolsLine) return;
+
+					veh.lines.carcols = carcolsLine.line;
+					veh.filePaths.carcols = carcolsLine.fullPath;
+				});
+			},
+			carmods() {
+				vehiclesList.filter(veh => veh.lines.carmods == null).forEach(veh => {
+					let carmodsLine = carmodsLines[veh.name];
+					if (!carmodsLine) return;
+
+					veh.lines.carmods = carmodsLine.line;
+					veh.filePaths.carmods = carmodsLine.fullPath;
+				});
+			},
+			audio() {
+				vehiclesList.filter(veh => veh.lines.audio == null).forEach(veh => {
+					let audioLine = vehicleAudio[veh.name];
+					if (!audioLine) return;
+
+					veh.lines.audio = audioLine;
+				});
+			},
+		};
+
+		/** @type {Vehicle[]} */
+		let vehiclesList = [];
+
+		let fileCount = 0;
+		let filesLoading = 0;
+		let files = {};
+
+		let ideLines = {};
+		let carcolsLines = {};
+		let audioLines = {};
+		let newIdeLines = [];
+		let newColsLines = [];
+		let newAudioLines = [];
+
+		let ideFiles = [];
+		let handlingFiles = [];
+		let carcolsFiles = [];
+		let carmodsFiles = [];
+		let fxtFiles = [];
+		let fastman92AudioFile = null;
+
+		let handlingTags = {};
+		let fxtTags = {};
+		let vehicleAudio = {};
+		let carmodsLines = {};
+
+		/**
+		 * @type {{
+		 * 		id: Number;
+		 * 		name: String;
+		 * 		fullPath: String;
+		 * }[]}
+		*/
+		let idList = [];
+		let filters = {
+			VehEnabled: 1,
+			SummaryType: 2,
+			CustomVeh: 1,
+			Audio: 1,
+			Tuning: 1,
+			HasColors: 1,
+			HasHandling: 1,
+		};
+		let summary = {
+			//errors
+			MissingDFF: [],
+			MissingTXD: [],
+			MissingHandling: [],
+			ExtraAudio: [],
+			ExtraCarCols: [],
+		};
+		const iconsHTML = {
+			check: '<i class="fa-solid fa-check"></i>',
+			cross: '<i class="fa-solid fa-xmark"></i>',
+			minus: '<i class="fa-solid fa-minus"></i>',
+			error: '<i class="fa-solid fa-triangle-exclamation"></i>',
+			info: '<i class="fa-solid fa-info"></i>',
+		}
+
+		//load gxt file as fxt format (manual process)
+		defaultVehIde.match(vehicleIdeRx).forEach(line => {
+			let splitten = line.split(vehicleIdeRx);
+			let vehname = splitten[2].toLowerCase();
+			if (vehname.endsWith(",")) vehname = vehname.slice(0, -1);
+			ideLines[vehname] = line;
+		});
+		defaultVehCols.match(carcolsRX).forEach(line => {
+			let splitten = line.split(carcolsRX);
+			let vehname = splitten[1].toLowerCase();
+			if (vehname.endsWith(",")) vehname = vehname.slice(0, -1);
+			carcolsLines[vehname] = line;
+		});
+		defaultVehAudio.match(vehicleAudioRX).forEach(line => {
+			let splitten = line.split(vehicleAudioRX);
+			let vehname = splitten[1].toLowerCase().trim();
+			audioLines[vehname] = line;
+		});
+
+		//console header
+		console.log("this project was made for personal use. its rushed out and not professionally written. the purpose of releasing this tool is to allow others to benifet from it too, you are free to copy, modify this tool just don't lock it behind a paywall. its made to help people and it has helped me a lot so i hope it helps you too.")
+
+		//area where it would detect game files being dropped
+		let dropArea = document;
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			event.preventDefault();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			let spawnedThreads = [];
+			for (var i=0; i<items.length; i++) {
+				var item = items[i].webkitGetAsEntry();
+				if (!item) continue;
+
+				if (item.isFile) fileCount++;
+				spawnedThreads.push(traverseFileTree(item));
+			}
+
+			Promise.all(spawnedThreads).then(() => {
+				updateFilesToIdList();
+			});
+		}, false);
+
+
+		//filter options
+		document.querySelectorAll(`.filter-option[filter-type="select"]`).forEach((filterElement) => {
+			let filterFor = filterElement.getAttribute("filter-for");
+			let filterOptions = filterElement.querySelectorAll("[filter-select] > *");
+			if (filters[filterFor] == null) return console.error("filter not exist", filterFor);
+
+			const updateOptions = (firstTime = false) => {
+				filterOptions.forEach((optionElement, optionIndex) => {
+					if (filters[filterFor] == optionIndex) optionElement.classList.add("active");
+					else optionElement.classList.remove("active");
+
+					if (!firstTime) return;
+					optionElement.addEventListener("click", () => {
+						filters[filterFor] = optionIndex;
+
+						updateOptions();
+					});
+				});
+
+				//update list
+				updateVisibleList();
+			};
+
+			updateOptions(true);
+		});
+
+
+		/**
+		 * @param {FileSystemEntry} item
+		 * @param {String} path
+		*/
+		async function traverseFileTree(_item, path) {
+			path = path || "";
+			if (_item.isFile == _item.isDirectory) {
+				throw Error("weird file: "+path+" "+item.name);
+			}
+
+			if (_item.isFile) {
+				/** @type {FileSystemFileEntry} */
+				let item = _item;
+
+				// Get file
+				item.file(function(file) {
+					// console.log(path, "File:", path + file.name, file);
+					addFileToFilesList(path, file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			}
+
+			/** @type {FileSystemDirectoryEntry} */
+			let item = _item;
+
+			// Get folder contents
+			var dirReader = item.createReader();
+			const enteriesReader = async () => {
+				await new Promise((resolve, reject) => {
+					dirReader.readEntries(async function(entries) {
+						fileCount += entries.filter((x) => x.isFile).length;
+
+						let isGameFolder = entries.find((x) => x.name.toLowerCase() == "vorbis.dll" && x.isFile) != null;
+						let itemName = item.name + "/";
+						if (isGameFolder) itemName = "";
+						// console.log(item, path, isGameFolder);
+
+						for (var i=0; i < entries.length; i++) {
+							traverseFileTree(entries[i], path + itemName);
+						}
+
+						//reads 100 more
+						if (entries.length >= 99) await enteriesReader();
+
+						resolve();
+					});
+				});
+			};
+			return enteriesReader();
+		}
+		
+		/**
+		 * @param {string} path
+		 * @param {File} file
+		*/
+		async function addFileToFilesList(path, file) {
+			let newFile = {
+				name: file.name,
+				path,
+				fullPath: path+file.name,
+				file,
+			};
+			files[newFile.fullPath] = newFile;
+
+			let fileName = file.name.toLowerCase();
+			if (!fileName.endsWith(".dff")) return;
+			let vehname = fileName.split("ug").slice(0, -1).join("ug");
+			if (fileName.startsWith("ug")) vehname = fileName.slice(3, -4);
+
+			if (ideLines[vehname] == null) {
+				console.warn("no ide for ", fileName,"\n using name: "+ vehname);
+			} else {
+				let line = ideLines[vehname];
+				const splittenLine = line.split(",");
+
+				let dffname = fileName.slice(0, -4).trim();
+				if (dffname.endsWith(",")) dffname = dffname.slice(0, -1).trim();
+
+				let newLine = splittenLine[0] + ", " + dffname + ",\t" + dffname + "," + splittenLine.slice(3).join(",");
+				newIdeLines.push(newLine);
+			}
+
+
+			if (carcolsLines[vehname] == null) {
+				//console.warn("no cols for ", fileName,"\n using name: "+ vehname);
+			} else {
+				let line = carcolsLines[vehname];
+				const splittenLine = line.split(",");
+
+				let dffname = fileName.slice(0, -4).trim();
+				if (dffname.endsWith(",")) dffname = dffname.slice(0, -1).trim();
+
+				let newLine = dffname + "," + splittenLine.slice(1).join(",");
+				newColsLines.push(newLine);
+			}
+			if (audioLines[vehname] == null) {
+				//console.warn("no audio for ", fileName,"\n using name: "+ vehname);
+			} else {
+				let line = audioLines[vehname];
+				const splittenLine = line.replace(/\t/g, " ").split(" ");
+
+				let dffname = fileName.slice(0, -4).trim();
+				if (dffname.endsWith(",")) dffname = dffname.slice(0, -1).trim();
+
+				let newLine = dffname + " " + splittenLine.slice(1).join(" ");
+				newAudioLines.push(newLine);
+			}
+		}
+
+		async function waitFileObjLoad(fileObj) {
+			if (fileObj.text instanceof Promise) await fileObj.text;
+			if (fileObj.isLoaded == true) return;
+			fileObj.text = fileObj.file.text();
+
+			filesLoading++;
+			await fileObj.text
+			.then(x => {
+				fileObj.text = x;
+				fileObj.isLoaded = true;
+				filesLoading--;
+			})
+			//.then(updateFilesToIdList);
+		}
+
+		async function checkFileIde(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			//register id in idList
+			if (ideFormatRX.test(fileObj.text)) {
+				fileObj.text.match(ideFormatRX).forEach(idLine => {
+					let idLineComponents = idLine.split(ideFormatRX).slice(1,-1);
+					if (idLineComponents[0] == '00') return;
+
+					let id = parseInt(idLineComponents[0]);
+					let name = idLineComponents[1];
+
+					if (name.endsWith(",")) name = name.slice(0, -1);
+					if (!isNaN(parseFloat(name)) && (parseFloat(name)+"") == name) return;
+
+					let idConflicts = idList.filter(x => x.id == id && x.name != name && (id < 16700 || id > 16708));
+					if (idConflicts.length > 0) idConflicts.map(x => console.log(x.id+": "+x.name+" to "+name+"\n"+x.fullPath+"\n"+fileObj.fullPath));
+
+					idList.push({
+						id,
+						name,
+						fullPath: fileObj.fullPath,
+					})
+				});
+			}
+
+			let hasVehicle = vehicleIdeRx.test(fileObj.text);
+			if (!hasVehicle) return;
+
+			ideFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(vehicleIdeRx).forEach(vehicleLine => {
+				let vehicleDetails = vehicleLine.split(vehicleIdeRx).slice(1,-1);
+				let vehicleId = parseInt(vehicleDetails[0]);
+				let vehicleName = vehicleDetails[1];
+				if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1);
+
+				let registeredVehicle = vehiclesList.find(veh =>
+					(veh.id == vehicleId && veh.name != vehicleName) || //id conflict
+					(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
+				);
+				if (registeredVehicle) {
+					console.warn(`CONFLICT: ${vehicleId} ${vehicleName}.\n${fileObj.fullPath}\n${registeredVehicle.filePaths.ide}`);
+					return;
+				}
+
+				//already exists (same id and same name)
+				if (vehiclesList.find(veh => veh.id == vehicleId) != null) {
+					registeredVehicle = vehiclesList.find(veh => veh.id == vehicleId);
+					registeredVehicle.hasDuplicate = true;
+					console.info(`double definition: ${vehicleId} ${vehicleName}.\n${fileObj.fullPath}\n${registeredVehicle.filePaths.ide}`);
+					return;
+				}
+
+				let fxtTag = vehicleDetails[5];
+				if (fxtTag.endsWith(",")) fxtTag = fxtTag.slice(0, -1);
+				
+				let handlingTag = vehicleDetails[4];
+				if (handlingTag.endsWith(",")) handlingTag = handlingTag.slice(0, -1);
+
+				/**
+				 * @type {Vehicle}
+				*/
+				let newVehicle = {
+					id: vehicleId,
+					type: vehicleDetails[3],
+					name: vehicleName,
+					gameName: fxtTags[fxtTag]?.text,
+					isDisabled: vehicleLine.startsWith("#"),
+					isDefault: vehicleId >= 400 && vehicleId <= 611,
+					fxtTag,
+					handlingTag,
+					lines: {
+						ide: vehicleLine,
+						handling: handlingTags[handlingTag]?.line,
+						audio: vehicleAudio[vehicleName],
+						carcols: carcolsLines[vehicleName]?.line,
+						carmods: carmodsLines[vehicleName]?.line,
+					},
+					filePaths: {
+						ide: fileObj.fullPath,
+						fxt: fxtTags[fxtTag]?.fullPath,
+						handling: handlingTags[handlingTag]?.fullPath,
+						carcols: carcolsLines[vehicleName]?.fullPath,
+						carmods: carmodsLines[vehicleName]?.fullPath,
+					},
+					summary: {
+						errors: [],
+						warnings: [],
+					}
+				};
+
+				vehiclesList.push(newVehicle);
+			});
+		}
+		async function checkFileFxt(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (fxtFormatRX.test(fileObj.text) != true) return;
+			fxtFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(fxtFormatRX).forEach(line => {
+				let tag = line.split(" ")[0];
+				let text = line.split(" ").slice(1).join(" ").trim();
+
+				if (fxtTags[tag] != null) {
+					console.warn(`FXT: tag ${tag} renaming from ${fxtTags[tag].text} to ${text}.\n${fxtTags[tag].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				fxtTags[tag] = {
+					text,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.tags();
+		}
+		async function checkFileHanding(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (handlingRx.test(fileObj.text) != true) return;
+			handlingFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(handlingRx).forEach(line => {
+				let tag = line.split(" ")[0].split("\t")[0];
+
+				if (handlingTags[tag] != null && handlingTags[tag].line !== line) {
+					console.warn(`HANDLING: replacing ${tag}.\n${handlingTags[tag].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				handlingTags[tag] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.handlings();
+		}
+		async function checkFileCarcols(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (carcolsRX.test(fileObj.text) != true) return;
+			carcolsFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(carcolsRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+				if (vehicleName == "DK22Pac") return;
+
+				if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line !== line) {
+					console.warn(`CARCOLS: replacing ${vehicleName}.\n${carcolsLines[vehicleName].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				carcolsLines[vehicleName] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.carcols();
+		}
+		async function checkFileCarMods(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (carmodsRX.test(fileObj.text) != true) return;
+			carmodsFiles.push(fileObj.fullPath);
+
+			fileObj.text.match(carmodsRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+
+				for (let upgradeIndex = 0; upgradeIndex < carmodsUpgrades.length; upgradeIndex++) {
+					const upgrade = carmodsUpgrades[upgradeIndex];
+					if (vehicleName.startsWith(upgrade)) return;
+				}
+
+				if (carmodsLines[vehicleName] != null &&
+					carmodsLines[vehicleName].line.trim() != line.trim()
+				) {
+					console.warn(`CARMODS: replacing ${vehicleName}.\n${carmodsLines[vehicleName].fullPath}\n${fileObj.fullPath}`);
+				}
+
+				carmodsLines[vehicleName] = {
+					line,
+					fullPath: fileObj.fullPath,
+				};
+			});
+
+			//update vehicles tag
+			VehicleUpdate.carmods();
+		}
+		async function checkFileVehAudio(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (fastman92AudioFile != null) {
+				console.error("there are 2 fastman files:\n"+fastman92AudioFile+"\n"+fileObj.fullPath);
+				return;
+			}
+			fastman92AudioFile = fileObj.fullPath;
+			if (vehicleAudioRX.test(fileObj.text) != true) {
+				console.error("corrupt fastman92 vehicle audio file");
+				return;
+			}
+
+			fileObj.text.match(vehicleAudioRX).forEach(line => {
+				let vehicleName = line.split(" ")[0].split("\t")[0];
+
+				if (vehicleAudio[vehicleName] != null) {
+					console.warn(`AUDIO: replacing ${vehicleName}.\n${fileObj.fullPath}`);
+				}
+
+				vehicleAudio[vehicleName] = line;
+			});
+
+			//update vehicles tag
+			VehicleUpdate.audio();
+		}
+		
+		
+		function updateVehicleData() {
+
+			//check for dff and txd existance
+			vehiclesList.forEach(veh => {
+				const vehicleFileName = veh.name.toLowerCase();
+				let txdname = veh.lines.ide.split(vehicleIdeRx)[3].trim().toLowerCase();
+				if (txdname.endsWith(",")) txdname = txdname.slice(0, -1).trim();
+				const filesWithVehicleName = Object.values(files).filter(fileObj => fileObj.name.toLowerCase().startsWith(vehicleFileName) || fileObj.name.toLowerCase().startsWith(txdname));
+
+				let dffLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == vehicleFileName+".dff");
+				if (dffLocation != null) {
+					veh.filePaths.dff = dffLocation.fullPath;
+				} else if (!veh.isDefault && !veh.isDisabled) {
+					console.log("no dff vehicle: "+veh.id+" "+veh.name);
+					summary.MissingDFF.push(veh.id);
+				}
+
+				let txdLocation = filesWithVehicleName.find(fileObj => fileObj.name.toLowerCase() == txdname+".txd");
+				if (txdLocation != null) {
+					veh.filePaths.txd = txdLocation.fullPath;
+				} else if (!veh.isDefault && !veh.isDisabled) {
+					console.log("no txd vehicle: "+veh.id+" "+veh.name);
+					summary.MissingTXD.push(veh.id);
+				}
+			});
+
+			//update vehicles summary
+			vehiclesList.forEach(veh => {
+				//missing dff/txd
+				if (!veh.isDefault) {
+					if (veh.filePaths.dff == null) veh.summary.errors.push("Missing DFF");
+					if (veh.filePaths.txd == null) veh.summary.errors.push("Missing TXD");
+				}
+
+				//missing handling
+				if (veh.filePaths.handling == null) {
+					veh.summary.errors.push("Missing Handling");
+					summary.MissingHandling.push(veh.id);
+				}
+
+				//missing audio
+				if (fastman92AudioFile != null && veh.lines.audio == null) veh.summary.warnings.push("Missing Audio");
+			});
+		}
+		async function updateFilesToIdList() {
+			let loadedFilesCount = Object.keys(files).length;
+			while (loadedFilesCount < fileCount) {
+				folderUpload.textContent = "Loaded "+loadedFilesCount+" out of "+fileCount+" files.";
+				await new Promise((res) => setTimeout(res, 250));
+				loadedFilesCount = Object.keys(files).length;
+			}
+			if (loadedFilesCount !== fileCount) return;
+
+			let readingFilesCount = Object.values(files).filter(x => x.text instanceof Promise).length;
+			while (readingFilesCount > 0) {
+				folderUpload.textContent = "Reading "+readingFilesCount+" file(s)";
+				await Object.values(files).find(x => x.text instanceof Promise).text;
+				readingFilesCount = Object.values(files).filter(x => x.text instanceof Promise).length;
+			}
+			if (readingFilesCount > 0) return;
+
+			folderUpload.textContent = "All files are loaded.";
+			await new Promise((res) => setTimeout(res, 1));
+			folderUpload.classList.remove("active");
+			idTable.innerHTML = `
+				<tr>
+					<th id="listed-vehicles">${vehiclesList.length}</th>
+					<th>id</th>
+					<th>type</th>
+					<th>name</th>
+					<th>game name</th>
+					<th>Audio</th>
+					<th>Colors</th>
+					<th>Tuning</th>
+					<th>Handing</th>
+				</tr>
+			`;
+
+			let wholeTable = ``;
+			updateVehicleData();
+			vehiclesList.forEach(veh => {
+				let id = veh.id;
+				let idName = veh.name;
+
+				let vehicleSummary = {
+					icon: iconsHTML.minus,
+					details: "Normal Vehicle",
+					color: "",
+				};
+				if (veh.summary.errors.length > 0) {
+					vehicleSummary = {
+						icon: iconsHTML.error,
+						color: "rgb(200,100,100)",
+						details: veh.summary.errors.join("\n"),
+					};
+				} else if (veh.summary.warnings.length > 0) {
+					vehicleSummary = {
+						icon: iconsHTML.error,
+						color: "rgb(200,200,100)",
+						details: veh.summary.warnings.join("\n"),
+					};
+				}
+
+				let tabelElement = `
+					<tr>
+						<td class="center" title="${vehicleSummary.details}" style="color: ${vehicleSummary.color};">${vehicleSummary.icon}</td>
+						<td class="center ${veh.isDisabled ? "missing" : ""}" title="${veh.filePaths.ide}\n${veh.lines.ide}" copy="${id}">${id}</td>
+						<td copy="${veh.lines.ide}">${vehicleTypeIcons[veh.type]} ${veh.type}</td>
+						<td copy="${idName}">${idName}</td>
+						<td class="${veh.gameName == null ? "missing" : ""}" title="${veh.fxtTag}\n${veh.filePaths.fxt}" copy="${veh.fxtTag}">${veh.gameName || veh.name.toUpperCase()}</td>
+						<td copy="${veh.lines.audio}" class="center ${veh.lines.audio == null ? "missing" : ""}">${veh.lines.audio ? iconsHTML.check : iconsHTML.cross}</td>
+						<td copy="${veh.lines.carcols}" class="center ${veh.lines.carcols == null ? "missing" : ""}" title="${veh.filePaths.carcols}\n${veh.lines.carcols}">${veh.lines.carcols ? iconsHTML.check : iconsHTML.cross}</td>
+						<td copy="${veh.lines.carmods}" class="center ${veh.lines.carmods == null ? "missing" : ""}" title="${veh.filePaths.carmods}\n${veh.lines.carmods}">${veh.lines.carmods ? iconsHTML.check : iconsHTML.cross}</td>
+						<td copy="${veh.lines.handling}" class="center ${veh.lines.handling == null ? "missing" : ""}" title="${veh.filePaths.handling}\n${veh.lines.handling}">${veh.lines.handling ? iconsHTML.check : iconsHTML.cross}</td>
+					</tr>
+				`;
+				wholeTable += tabelElement;
+				// idTable.innerHTML += tabelElement;
+				// updateIdStatus();
+			});
+
+			console.log("Loaded Data.");
+			idTable.innerHTML += wholeTable;
+
+			//click to copy field
+			idTable.querySelectorAll("[copy]").forEach(element => {
+				let text = element.getAttribute("copy");
+				if ((text || "") == "" || text == "undefined") return;
+				
+				element.addEventListener("click", () => {
+					copyContent(text);
+				});
+			});
+
+			updateIdStatus();
+		}
+
+		function updateIdStatus() {
+			const enabledVeh = vehiclesList.filter(x => !x.isDisabled);
+
+			
+			let VehiclesWithTuning = enabledVeh.filter(x => 
+				x.lines.carmods?.replace(/,/g, " ").slice(x.name.length).trim()
+				.replace(/stereo/g, "")
+				.replace(/nto_b_[^ \n]+/g, "").trim()
+			);
+			window.VehiclesWithTuning = VehiclesWithTuning;
+
+			idStatus.innerHTML = `
+			In-Game Vehicles: ${enabledVeh.length}
+			Custom Vehicles: ${enabledVeh.filter(x => !x.isDefault).length}
+			Disabled Vehicles: ${vehiclesList.filter(x => x.isDisabled).length}
+			Total Vehicles: ${vehiclesList.length}
+			Vehicles with tuning: ${VehiclesWithTuning.length}
+			Vehicles without color: ${enabledVeh.filter(x => !x.lines.carcols).length} (includes uncolorable vehicles)
+			Vehicles without audio: ${enabledVeh.filter(x => !x.lines.audio).length}
+			Vehicles without handling: ${enabledVeh.filter(x => !x.lines.handling).length}
+			Handling Count: ${Object.keys(handlingTags).length}
+			`.trim().replace(/\n/gm, "<br>");
+
+			updateSummary();
+		}
+		function updateSummary() {
+			const errorHeader = document.getElementById("summary-errors-count");
+			const errorSection = document.getElementById("summary-errors");
+
+			summary.ExtraAudio = Object.keys(vehicleAudio).filter(x => vehiclesList.find(veh => veh.name == x && !veh.isDisabled) == null);
+			summary.ExtraCarCols = Object.keys(carcolsLines).filter(x => vehiclesList.find(veh => veh.name == x) == null);
+
+
+			let errorLength = 0;
+			errorLength += summary.MissingDFF.length;
+			errorLength += summary.MissingTXD.length;
+			errorLength += summary.MissingHandling.length;
+			errorLength += summary.ExtraAudio.length;
+			errorLength += summary.ExtraCarCols.length;
+
+			if (errorLength == 0) {
+				errorHeader.textContent = "No Errors";
+				errorHeader.style.color = "#ddd";
+				errorSection.textContent = "No Errors Found.";
+				return;
+			} else {
+				errorHeader.textContent = errorLength+" Errors";
+				errorHeader.style.color = "";
+				errorSection.innerHTML = "";
+			}
+
+			if (summary.MissingDFF.length > 0) errorSection.innerHTML += `<b>${summary.MissingDFF.length} Missing DFF:</b> ${summary.MissingDFF.join(", ")}<br>`;
+			if (summary.MissingTXD.length > 0) errorSection.innerHTML += `<b>${summary.MissingTXD.length} Missing TXD:</b> ${summary.MissingTXD.join(", ")}<br>`;
+			if (summary.MissingHandling.length > 0) errorSection.innerHTML += `<b>${summary.MissingHandling.length} Missing Handling:</b> ${summary.MissingHandling.join(", ")}<br>`;
+			if (summary.ExtraAudio.length > 0) errorSection.innerHTML += `<b>${summary.ExtraAudio.length} Unused Vehicle Audio:</b> ${summary.ExtraAudio.join(", ")}<br>`;
+			if (summary.ExtraCarCols.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarCols.length} Unused CarCols:</b> ${summary.ExtraCarCols.map(x => `<span title="${carcolsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
+		}
+
+
+
+
+		const initilizedActions = {
+			cheatmenu: false,
+			vehiclestest: false,
+			modifyids: false,
+			modifynames: false,
+			vehiclesepartor: false,
+			vehicleorgenizer: false,
+		}
+		function generateCheatMenu() {
+			const popup = document.getElementById("cheatmenu-popup");
+			if (initilizedActions.cheatmenu) return popup.classList.add("active");
+			initilizedActions.cheatmenu = true;
+
+			const textBox = document.getElementById("cheatmenu-vehicles");
+			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && !x.isDefault);
+			const usedNames = [];
+
+			if (enabledCustomVeh.length == 0) {
+				alert("No custom vehicles detected.");
+				return;
+			}
+
+			// prompt("Copy and paste in `CheatMenuSA\\data\\vehicles.toml`", "[Custom]\n"+
+			// enabledCustomVeh.map((veh, vehi) => {
+			// 		let vehicleName = (veh.gameName || veh.name.toUpperCase()).replace(/'/g, "");
+
+			// 		while (usedNames.includes(vehicleName)) {
+			// 			vehicleName = vehicleName + " ";
+			// 		}
+			// 		usedNames.push(vehicleName);
+
+			// 		return `'${vehicleName}' = '${veh.id}'`;
+			// 	}).join("\n"),
+			// );
+			textBox.value = "[Custom]\n"+
+			enabledCustomVeh.map((veh, vehi) => {
+					let vehicleName = (veh.gameName || veh.name.toUpperCase()).replace(/'/g, "");
+
+					while (usedNames.includes(vehicleName)) {
+						vehicleName = vehicleName + " ";
+					}
+					usedNames.push(vehicleName);
+
+					return `'${vehicleName}' = '${veh.id}'`;
+				}).join("\n");
+
+			popup.classList.add("active");
+		}
+		function generateVehiclesTest() {
+			const popup = document.getElementById("vehiclestest-popup");
+			if (initilizedActions.vehiclestest) return popup.classList.add("active");
+			initilizedActions.vehiclestest = true;
+
+			const textBox = document.getElementById("vehiclestest-vehicles");
+			const enabledCustomVeh = vehiclesList.filter(x => !x.isDisabled && !x.isDefault);
+			let lowestId = Infinity;
+			let highestId = 0;
+			let unavailableIds = [];
+
+			if (enabledCustomVeh.length == 0) {
+				alert("No custom vehicles detected.");
+				return;
+			}
+
+			//get highest and lowest ids
+			enabledCustomVeh.forEach((veh, vehi) => {
+				if (veh.id > highestId) highestId = veh.id;
+				if (veh.id < lowestId) lowestId = veh.id;
+			});
+
+			//search from lows to highs and list unavailable ids
+			for (let idIndex = lowestId; idIndex <= highestId; idIndex++) {
+				if (enabledCustomVeh.find(x => x.id == idIndex) != null) continue;
+
+				unavailableIds.push(idIndex);
+			}
+
+			// prompt(`Copy and paste in 'cleo\\Vehicles Test.ini'\nStart At: ${lowestId}\nEnd At: ${highestId}\nTotal: ${unavailableIds.length}`, 
+			// 	unavailableIds.map((id, index) => `ID${index+1} = ${id}`).join("\n")
+			// );
+			textBox.value = `AddedIDstart = ${lowestId}\nAddedIDend = ${highestId}\n\n[Ignore]\nTotal = ${unavailableIds.length}\n` + unavailableIds.map((id, index) => `ID${index+1} = ${id}`).join("\n")
+			popup.classList.add("active");
+		}
+		function modifyVehiclesIds() {
+			const popup = document.getElementById("modifyids-popup");
+			if (initilizedActions.modifyids) return popup.classList.add("active");
+			initilizedActions.modifyids = true;
+
+			const startIndex = document.getElementById("modifyids-startindex");
+			const skipExistingIdsInput = document.getElementById("modifyids-skipexistingids");
+			const textBox = document.getElementById("modifyids-vehicles");
+
+			const updateList = () => {
+				let index = parseInt(startIndex.value);
+				let skipUsed = skipExistingIdsInput.checked;
+				textBox.value = textBox.value.replace(vehicleIdeRx, (line, id) => {
+					let isDisabled = false;
+					if (line.startsWith("#")) isDisabled = true;
+
+					while (skipUsed && //allows skipping
+						(idList.find(x => x.id == index) != null || // skip used ids
+						vehiclesList.find(x => x.id == index) != null) // skip disabled ids
+					) {
+						index--;
+					}
+					index--;
+
+					return (isDisabled ? "#" : "") + (index+1) + line.slice(isDisabled + id.length)
+				});
+			};
+
+			startIndex.addEventListener("input", updateList);
+			skipExistingIdsInput.addEventListener("input", updateList);
+			textBox.addEventListener("change", updateList);
+
+			popup.classList.add("active");
+		}
+		function modifyVehiclesName() {
+			const popup = document.getElementById("modifynames-popup");
+			if (initilizedActions.modifynames) return popup.classList.add("active");
+			initilizedActions.modifynames = true;
+
+			const fromRx = document.getElementById("modifynames-from");
+			const toRx = document.getElementById("modifynames-to");
+			const updateBtn = document.getElementById("modifynames-update");
+			const textBox = document.getElementById("modifynames-vehicles");
+
+			updateBtn.addEventListener("click", () => {
+				let rgx = RegExp(fromRx.value, "gm");
+				// textBox.value = textBox.value.replace(rgx, toRx.value);
+				textBox.value = textBox.value.replace(vehicleIdeRx, (line) => {
+					if (!line.includes(",")) return;
+					const splittenLine = line.split(",");
+
+					let dffname = splittenLine[1].trim();
+					let txdname = splittenLine[2].trim();
+					if (dffname.endsWith(",")) dffname = dffname.slice(0, -1).trim();
+					if (txdname.endsWith(",")) txdname = txdname.slice(0, -1).trim();
+
+					dffname = dffname.replace(rgx, toRx.value);
+					txdname = txdname.replace(rgx, toRx.value);
+
+					return splittenLine[0] + ", " + dffname + ",\t" + txdname + "," + splittenLine.slice(3).join(",");
+					// return `${id}, ${dffname.replace(rgx, toRx.value)},\t${txdname.replace(rgx, toRx.value)},` + line.split(",").slice(3).join(",");
+				});
+				textBox.value = textBox.value.replace(carcolsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0].trim();
+					if (vehicleName == "DK22Pac") return line;
+
+					if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1).trim();
+					const vehNameLength = vehicleName.length;
+					vehicleName = vehicleName.replace(rgx, toRx.value);
+
+					return vehicleName + line.trim().slice(vehNameLength);
+				});
+				textBox.value = textBox.value.replace(carmodsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0].trim;
+
+					if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1).trim();
+					const vehNameLength = vehicleName.length;
+					vehicleName = vehicleName.replace(rgx, toRx.value);
+
+					return vehicleName + line.trim().slice(vehNameLength);
+				});
+				textBox.value = textBox.value.replace(vehicleAudioRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].trim();
+
+					const vehNameLength = vehicleName.length;
+					vehicleName = vehicleName.replace(rgx, toRx.value);
+
+					return vehicleName + line.trim().slice(vehNameLength);
+				});
+
+			});
+
+			popup.classList.add("active");
+		}
+		function vehiclesSeparator() {
+			const popup = document.getElementById("vehiclesepartor-popup");
+			if (initilizedActions.vehiclesepartor) return popup.classList.add("active");
+			initilizedActions.vehiclesepartor = true;
+
+			const updateBtn = document.getElementById("vehiclesepartor-update");
+			const allVehicles = document.getElementById("vehiclesepartor-vehicles");
+			const existingVeh = document.getElementById("vehiclesepartor-existing");
+
+			updateBtn.addEventListener("click", () => {
+				existingVeh.value = "";
+				let conflictLines = [];
+				let duplicateLines = [];
+				allVehicles.value = allVehicles.value.replace(vehicleIdeRx, (line, ...vehicleDetails) => {
+
+					let vehicleId = parseInt(vehicleDetails[0]);
+					let vehicleName = vehicleDetails[1];
+					if (vehicleName.endsWith(",")) vehicleName = vehicleName.slice(0, -1);
+
+					//conflict
+					let registeredVehicle = vehiclesList.find(veh =>
+						(veh.id == vehicleId && veh.name != vehicleName) || //id conflict
+						(veh.id != vehicleId && veh.name == vehicleName) 	//same model twice
+					);
+					if (registeredVehicle) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					//already exists (same id and same name)
+					if (vehiclesList.find(veh => veh.id == vehicleId) != null) {
+						duplicateLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				conflictLines.push("");
+				allVehicles.value = allVehicles.value.replace(carcolsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+					if (vehicleName == "DK22Pac") return line;
+
+					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() == line.trim()) {
+						duplicateLines.push(line);
+						return "";
+					}
+					if (carcolsLines[vehicleName] != null && carcolsLines[vehicleName].line.trim() !== line.trim()) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				conflictLines.push("");
+				allVehicles.value = allVehicles.value.replace(carmodsRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0].split(",")[0];
+
+					if (carmodsLines[vehicleName] != null &&
+						carmodsLines[vehicleName].line.trim() == line.trim()
+					) {
+						duplicateLines.push(line);
+						return "";
+					}
+					if (carmodsLines[vehicleName] != null &&
+						carmodsLines[vehicleName].line.trim() != line.trim()
+					) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				conflictLines.push("");
+				allVehicles.value = allVehicles.value.replace(handlingRx, (line) => {
+
+					let tag = line.split(" ")[0].split("\t")[0];
+
+					if (handlingTags[tag] != null && handlingTags[tag].line.trim() == line.trim()) {
+						duplicateLines.push(line);
+						return "";
+					}
+					if (handlingTags[tag] != null && handlingTags[tag].line.trim() !== line.trim()) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				conflictLines.push("");
+				allVehicles.value = allVehicles.value.replace(fxtFormatRX, (line) => {
+
+					let tag = line.split(" ")[0];
+					let text = line.split(" ").slice(1).join(" ").trim();
+
+					if (fxtTags[tag] != null) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+				conflictLines.push("");
+				allVehicles.value = allVehicles.value.replace(vehicleAudioRX, (line) => {
+
+					let vehicleName = line.split(" ")[0].split("\t")[0];
+
+					if (vehicleAudio[vehicleName] != null && vehicleAudio[vehicleName].trim() == line.trim()) {
+						duplicateLines.push(line);
+						return "";
+					}
+					if (vehicleAudio[vehicleName] != null && vehicleAudio[vehicleName].trim() !== line.trim()) {
+						conflictLines.push(line);
+						return "";
+					}
+
+					return line;
+				});
+
+				existingVeh.value = "\n\n# Conflicts\n\n"+conflictLines.join("\n")+"\n\n\n\n# Duplicates\n\n"+duplicateLines.join("\n");
+			});
+
+			popup.classList.add("active");
+		}
+		function vehiclesOrgenizer() {
+			const popup = document.getElementById("vehicleorgenizer-popup");
+			if (initilizedActions.vehicleorgenizer) return popup.classList.add("active");
+			initilizedActions.vehicleorgenizer = true;
+
+			const updateBtn = document.getElementById("vehicleorgenizer-update");
+			const allVehicles = document.getElementById("vehicleorgenizer-vehicles");
+			const existingVeh = document.getElementById("vehicleorgenizer-existing");
+
+			updateBtn.addEventListener("click", () => {
+				existingVeh.value = "";
+				let existingLines = {
+					ide: [],
+					carcols: [],
+					carmods: [],
+					handling: [],
+					audio: [],
+					fxt: [],
+				};
+				allVehicles.value = allVehicles.value.replace(vehicleIdeRx, (line) => {
+					existingLines.ide.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(carcolsRX, (line) => {
+					existingLines.carcols.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(carmodsRX, (line) => {
+					existingLines.carmods.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(handlingRx, (line) => {
+					existingLines.handling.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(vehicleAudioRX, (line) => {
+					existingLines.audio.push(line);
+					return "";
+				});
+				allVehicles.value = allVehicles.value.replace(fxtFormatRX, (line) => {
+					existingLines.fxt.push(line);
+					return "";
+				});
+
+				if (existingLines.ide.length > 0) {
+					existingVeh.value += `\n\n\n####################\n#   Vehciles.ide   #\n####################\n\n`;
+					existingVeh.value += existingLines.ide.join("\n")+"\n";
+				}
+				if (existingLines.carcols.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#   CarCols.dat   #\n###################\n\n`;
+					existingVeh.value += existingLines.carcols.join("\n")+"\n";
+				}
+				if (existingLines.carmods.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#   CarMods.dat   #\n###################\n\n`;
+					existingVeh.value += existingLines.carmods.join("\n")+"\n";
+				}
+				if (existingLines.handling.length > 0) {
+					existingVeh.value += `\n\n\n####################\n#   Handling.cfg   #\n####################\n\n`;
+					existingVeh.value += existingLines.handling.join("\n")+"\n";
+				}
+				if (existingLines.audio.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#  Vehcile Audio  #\n###################\n\n`;
+					existingVeh.value += existingLines.audio.join("\n")+"\n";
+				}
+				if (existingLines.fxt.length > 0) {
+					existingVeh.value += `\n\n\n###################\n#       FXT       #\n###################\n\n`;
+					existingVeh.value += existingLines.fxt.join("\n")+"\n";
+				}
+			});
+
+			popup.classList.add("active");
+		}
+		
+		function updateSearch() {
+			updateVisibleList();
+		}
+		function updateVisibleList() {
+			if (!(searchbox instanceof HTMLInputElement)) return;
+
+			const text = searchbox.value.toLowerCase();
+			const hasTextSearch = text.length > 0;
+			const isTextNumber = !isNaN(parseInt(text)) && (parseInt(text)+"") == text;
+			let allVehicles = idTable.querySelectorAll("tbody:nth-child(2) > tr");
+
+			const vehiclesCountElement = document.getElementById("listed-vehicles");
+			let showingVehiclesCount = 0;
+
+			allVehicles.forEach((vehElement, vehIndex) => {
+				const veh = vehiclesList[vehIndex];
+
+				let isShowing = true;
+
+				if (hasTextSearch) {
+
+					//name search
+					if (!veh.gameName?.toLowerCase().includes(text) && !veh.name.toLowerCase().includes(text)) {
+						// check for id search
+						if (isTextNumber) {
+							if (!(veh.id+"").startsWith(text)) isShowing = false;
+						} else isShowing = false;
+					}
+
+				}
+
+				//apply filters
+				if (isShowing && filters.VehEnabled != 1) {
+					if (filters.VehEnabled == 0 && veh.isDisabled) isShowing = false;
+					else if (filters.VehEnabled == 2 && !veh.isDisabled) isShowing = false;
+				}
+				if (isShowing && filters.SummaryType != 2) {
+					if (filters.SummaryType == 0 && veh.summary.errors.length == 0) isShowing = false;
+					if (filters.SummaryType == 1 && veh.summary.warnings.length == 0) isShowing = false;
+				}
+				if (isShowing && filters.CustomVeh != 1) {
+					if (filters.CustomVeh == 0 && veh.isDefault) isShowing = false;
+					else if (filters.CustomVeh == 2 && !veh.isDefault) isShowing = false;
+				}
+				if (isShowing && filters.Tuning != 1) {
+					let hasTuning = (veh.lines.carmods?.replace(/,/g, " ").slice(veh.name.length).trim()
+						.replace(/stereo/g, "")
+						.replace(/nto_b_[^ \n]+/g, "").trim() || "") != "";
+					if (filters.Tuning == 0 && !hasTuning) isShowing = false;
+					else if (filters.Tuning == 2 && veh.lines.carmods != null) isShowing = false;
+				}
+				if (isShowing && filters.Audio != 1) {
+					if (filters.Audio == 0 && veh.lines.audio == null) isShowing = false;
+					else if (filters.Audio == 2 && veh.lines.audio != null) isShowing = false;
+				}
+				if (isShowing && filters.HasColors != 1) {
+					if (filters.HasColors == 0 && veh.lines.carcols == null) isShowing = false;
+					else if (filters.HasColors == 2 && veh.lines.carcols != null) isShowing = false;
+				}
+				if (isShowing && filters.HasHandling != 1) {
+					if (filters.HasHandling == 0 && veh.lines.handling == null) isShowing = false;
+					else if (filters.HasHandling == 2 && veh.lines.handling != null) isShowing = false;
+				}
+
+				//display vehicle
+				if (isShowing) { vehElement.classList.remove("hidden"); showingVehiclesCount++; }
+				else vehElement.classList.add("hidden");
+			});
+
+			if (vehiclesCountElement) vehiclesCountElement.textContent = showingVehiclesCount;
+		}
+
+
+
+
+		//https://www.freecodecamp.org/news/copy-text-to-clipboard-javascript/
+		async function copyContent(text) {
+			try {
+				await navigator.clipboard.writeText(text);
+				console.log('Content copied to clipboard');
+				/* Resolved - text copied to clipboard successfully */
+			} catch (err) {
+				console.error('Failed to copy: ', err);
+				/* Rejected - text failed to copy to the clipboard */
+			}
+		}
+	</script>
+</body>
+</html>

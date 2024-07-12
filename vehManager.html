@@ -301,6 +301,21 @@
 							<i class="fa-solid fa-xmark"></i>
 						</div>
 					</div>
+					<div class="filter-option custom-select" filter-type="input" filter-for="VehType">
+						<select value="any" filter-select>
+							<option value="any">Any Vehicle Type</option>
+							<option value="car">Car</option>
+							<option value="mtruck">Monster Truck</option>
+							<option value="heli">Helicopter</option>
+							<option value="boat">Boat</option>
+							<option value="trailer">Trailer</option>
+							<option value="bike">Motorbike</option>
+							<option value="quad">Quad Bike</option>
+							<option value="bmx">BMX Bike</option>
+							<option value="train">Train</option>
+							<option value="plane">Plane</option>
+						</select>
+					</div>
 					<div class="filter-option custom-select" filter-type="input" filter-for="ClassType">
 						<select value="any" filter-select>
 							<option value="any">Any Vehicle Class</option>
@@ -522,6 +537,7 @@
 			HasColors: 1,
 			HasHandling: 1,
 			ClassType: "any",
+			VehType: "any",
 		};
 		let summary = {
 			//errors
@@ -1582,6 +1598,9 @@
 				if (isShowing && filters.HasHandling != 1) {
 					if (filters.HasHandling == 0 && veh.lines.handling == null) isShowing = false;
 					else if (filters.HasHandling == 2 && veh.lines.handling != null) isShowing = false;
+				}
+				if (isShowing && filters.VehType != "any") {
+					if (filters.VehType != veh.type) isShowing = false;
 				}
 				if (isShowing && filters.ClassType != "any") {
 					if (filters.ClassType != veh.vehicleClass) isShowing = false;
