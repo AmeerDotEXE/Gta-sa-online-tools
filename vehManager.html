@@ -546,6 +546,7 @@
 			MissingHandling: [],
 			ExtraAudio: [],
 			ExtraCarCols: [],
+			ExtraCarMods: [],
 		};
 		const iconsHTML = {
 			check: '<i class="fa-solid fa-check"></i>',
@@ -1128,6 +1129,7 @@
 
 			summary.ExtraAudio = Object.keys(vehicleAudio).filter(x => vehiclesList.find(veh => veh.name == x && !veh.isDisabled) == null);
 			summary.ExtraCarCols = Object.keys(carcolsLines).filter(x => vehiclesList.find(veh => veh.name == x) == null);
+			summary.ExtraCarMods = Object.keys(carmodsLines).filter(x => vehiclesList.find(veh => veh.name == x) == null);
 
 
 			let errorLength = 0;
@@ -1136,6 +1138,7 @@
 			errorLength += summary.MissingHandling.length;
 			errorLength += summary.ExtraAudio.length;
 			errorLength += summary.ExtraCarCols.length;
+			errorLength += summary.ExtraCarMods.length;
 
 			if (errorLength == 0) {
 				errorHeader.textContent = "No Errors";
@@ -1153,6 +1156,7 @@
 			if (summary.MissingHandling.length > 0) errorSection.innerHTML += `<b>${summary.MissingHandling.length} Missing Handling:</b> ${summary.MissingHandling.join(", ")}<br>`;
 			if (summary.ExtraAudio.length > 0) errorSection.innerHTML += `<b>${summary.ExtraAudio.length} Unused Vehicle Audio:</b> ${summary.ExtraAudio.join(", ")}<br>`;
 			if (summary.ExtraCarCols.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarCols.length} Unused CarCols:</b> ${summary.ExtraCarCols.map(x => `<span title="${carcolsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
+			if (summary.ExtraCarMods.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarMods.length} Unused CarCols:</b> ${summary.ExtraCarMods.map(x => `<span title="${carmodsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
 		}
 
 
