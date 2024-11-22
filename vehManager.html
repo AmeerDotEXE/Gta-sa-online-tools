@@ -236,6 +236,18 @@
 		</div>
 	</div>
 	<div class="section">
+		<h3>Experimental View</h3>
+		<div style="display: flex;justify-content: center;width: 100%;height:100%">
+			<table id="def-colors" style="width: fit-content;height: fit-content;">
+			  <!-- JS inserts colors here -->
+			</table>
+			<canvas id="glcanvas" width="650" height="480" style="border-radius: 8px;"></canvas>
+			<table id="colors" style="width: fit-content;height: fit-content;">
+			  <!-- JS inserts colors here -->
+			</table>
+		</div>
+	</div>
+	<div class="section">
 		<h3>Filters</h3>
 		<div style="display: flex;gap: 0.25rem;">
 			<input id="veh-search" class="input" placeholder="Search..." oninput="updateSearch()" style="flex-grow: 1;">
@@ -392,8 +404,17 @@
 		</div>
 	</div>
 
+	<script src="./vehviewer/gl-matrix.js"></script>
+	<script src="./vehviewer/gl-util.js"></script>
+	<script src="./vehviewer/rw.js"></script>
+	<script src="./vehviewer/rwrender.js"></script>
+	<script src="./vehviewer/shaders.js"></script>
+	<script src="./vehviewer/rwstream.js"></script>
+	<script src="./vehviewer/main.js"></script>
+	<script src="./vehviewer/loaddata.js"></script>
 	<script>
 		"use strict";
+		InitRW();
 		const folderUpload = document.getElementById("gta-folder-upload");
 		const idStatus = document.getElementById("id-status");
 		const idTable = document.getElementById("id-table");
@@ -883,6 +904,12 @@
 			await waitFileObjLoad(fileObj);
 
 			if (carcolsRX.test(fileObj.text) != true) return;
+			if (fileObj.name.toLowerCase() == "carcols.dat") {
+				VehicleColours = [];
+				LoadSectionedFile(fileObj.text, {
+					col: LoadColour
+				})
+			}
 			carcolsFiles.push(fileObj.fullPath);
 
 			fileObj.text.match(carcolsRX).forEach(line => {
@@ -1035,6 +1062,7 @@
 					<th>Colors</th>
 					<th>Tuning</th>
 					<th>Handing</th>
+					<th>3D view</th>
 				</tr>
 			`;
 
@@ -1075,6 +1103,7 @@
 						<td copy="${veh.lines.carcols}" class="center ${veh.lines.carcols == null ? "missing" : ""}" title="${veh.filePaths.carcols}\n${veh.lines.carcols}">${veh.lines.carcols ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carmods}" class="center ${veh.lines.carmods == null ? "missing" : ""}" title="${veh.filePaths.carmods}\n${veh.lines.carmods}">${veh.lines.carmods ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.handling}" class="center ${veh.lines.handling == null ? "missing" : ""}" title="${veh.filePaths.handling}\n${veh.lines.handling}">${veh.lines.handling ? iconsHTML.check : iconsHTML.cross}</td>
+						<td vehmodel="${idName}" class="center ${veh.filePaths.dff == null ? "missing" : ""}" style="cursor: pointer;">${veh.filePaths.dff == null ? "Unavailable" : "View"}</td>
 					</tr>
 				`;
 				wholeTable += tabelElement;
@@ -1084,6 +1113,48 @@
 
 			console.log("Loaded Data.");
 			idTable.innerHTML += wholeTable;
+			
+			DataDirPath = "sa/data";
+			ModelsDirPath = "sa/models";
+			TexturesDirPath = "sa/textures";
+			TxdDirPath = "sa/txd";
+			fetchModelTXD("vehviewer/sa/textures/vehicle.txd", function(vehTxd) {
+				globalTxd = vehTxd;
+				let colortable = document.getElementById('def-colors');
+				removeChildren(colortable);
+
+				for(let i = 0; i < VehicleColours.length; i += 8){
+					let tr = document.createElement('tr');
+					for(let j = 0; j < 8 && (i+j) < VehicleColours.length; j++){
+						let td = document.createElement('td');
+						td.width = "16px";
+						td.height = "16px";
+						let col = VehicleColours[i + j];
+						col.push(255);
+						td.style = "background-color: rgb("+col[0]+","+col[1]+","+col[2]+")";
+						td.onclick = function() {
+							setVehicleColors(modelinfo, col, col, col, col);
+						};
+						tr.appendChild(td);
+					}
+					colortable.appendChild(tr);
+				}
+				try {
+					SelectModel(vehiclesList.find(x => x.isDisabled == false && x.filePaths.dff?.length > 0 && x.summary.errors.length == 0)?.name);
+				} catch {}
+			});
+			// loadVehicleViewer("vehicles.ide", function() {
+			// });
+			
+			//3d view
+			idTable.querySelectorAll("[vehmodel]").forEach(element => {
+				let text = element.getAttribute("vehmodel");
+				if ((text || "") == "" || text == "undefined") return;
+				
+				element.addEventListener("click", () => {
+					SelectModel(text);
+				});
+			});
 
 			//click to copy field
 			idTable.querySelectorAll("[copy]").forEach(element => {

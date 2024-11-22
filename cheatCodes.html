@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+
+	<script src="https://www.unpkg.com/@tsxper/crc32@2.1.0/esm/CRC32.js"></script>
+
+	<script>
+		console.clear();
+
+		// Alex
+		var makeCRCTable = function(){
+			var c;
+			var crcTable = [];
+			for(var n =0; n < 256; n++){
+				c = n;
+				for(var k =0; k < 8; k++){
+					c = ((c&1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+				}
+				crcTable[n] = c;
+			}
+			return crcTable;
+		}
+		var alex_crc32 = function(str) {
+			var crcTable = window.crcTable || (window.crcTable = makeCRCTable());
+			var crc = 0 ^ (-1);
+
+			for (var i = 0; i < str.length; i++ ) {
+				crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
+			}
+
+			return (crc ^ (-1)) >>> 0;
+		};
+		
+		const letters = ["w","a","s","d"];
+		const MinimumLetterLength = 6;
+		function getSequence(id) {
+			let numberSequence = id.toString(letters.length).padStart(MinimumLetterLength, 0);
+
+			return numberSequence.split("").map(num => letters[num]).join("");
+		}
+
+
+		// console.log("Test Started");
+		// var tInit = Date.now();
+		// for (let i = 0; i < 10_000_000; i++) {
+		// 	//testing INeedSomeHelp number 288560596
+		// 	alex_crc32("PLEHEMOSDEENI");
+		// }
+		// console.log("done", Date.now() - tInit);
+
+		let workersCount = 16;
+		let finishedWorkers = 0;
+		function indexCounting(repetition) {
+			finishedWorkers = 0;
+			let startOffset = BigInt(repetition) * BigInt(16e6);
+			if (startOffset >= BigInt(2) ** BigInt(29)) return console.error("not found");
+			var tInit = Date.now();
+			for (let workerIndex = 0; workerIndex < workersCount; workerIndex++) {
+				// Create a new Web Worker
+				const worker = new Worker('crc32.js');
+
+				// Define a message handler for the Web Worker
+				worker.onmessage = function(event) {
+					// This function is called when the worker sends a message back
+					console.log((workerIndex+1)+'. Worker:', event.data.runDuration);
+					worker.terminate();
+					finishedWorkers++;
+
+					if (finishedWorkers == workersCount) {
+						var tDur = Date.now() - tInit;
+						console.log("all done in", tDur, "avarage", tDur/workersCount,"\nLoaded", workersCount * 1e6, "combinations");
+						indexCounting(repetition+1);
+					}
+				};
+
+				// Send a message to the Web Worker
+				var workerStart = BigInt(workerIndex) * BigInt(1e6);
+				worker.postMessage([startOffset + workerStart, startOffset + workerStart + BigInt(1e6)]);
+			}
+		}
+		indexCounting(0);
+	</script>
+</head>
+<body>
+	
+</body>
+</html>
