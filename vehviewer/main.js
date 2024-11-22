@@ -44,6 +44,7 @@ function mouseDown(e)
 	}
 	old_x = e.pageX;
 	old_y = e.pageY;
+	camScroll = false;
 	e.preventDefault();
 }
 
@@ -61,7 +62,7 @@ function mouseMove(e)
 		dY = (e.pageY-old_y)*2*Math.PI/gl.canvas.height;
 
 		camYaw -= dX;
-		camPitch += dY;
+		camPitch += dY*0.75;
 		if(camPitch > Math.PI/2 - 0.01) camPitch = Math.PI/2 - 0.01
 		if(camPitch < -Math.PI/2 + 0.01) camPitch = -Math.PI/2 + 0.01
 
@@ -79,6 +80,12 @@ function mouseMove(e)
 		e.preventDefault();
 	}
 };
+function mouseScroll(e)
+{
+	camDist += e.deltaY / 400;
+	if(camDist < 0.1) camDist = 0.1;
+	e.preventDefault();
+};
 
 function InitRW()
 {
@@ -95,7 +102,7 @@ console.log("InitRW()");
 	canvas.addEventListener("mouseup", mouseUp, false);
 	canvas.addEventListener("mouseout", mouseUp, false);
 	canvas.addEventListener("mousemove", mouseMove, false);
-	canvas.addEventListener("mouseenter", () => camScroll = !camScroll, false);
+	canvas.addEventListener("mousewheel", mouseScroll, false);
 
 	whitetex = loadTexture("textures/white.png");
 
@@ -205,6 +212,7 @@ function loadCarSA(CurrentModel)
 		loadDFF(CurrentModel.filePaths.dff, function(clump){
 			myclump = clump;
 			allVehWheels = [];
+			camScroll = true;
 			modelinfo = processVehicle(myclump);
 			setupSACar(myclump);
 			setVehicleColors(modelinfo,

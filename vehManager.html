@@ -1132,8 +1132,16 @@
 						let col = VehicleColours[i + j];
 						col.push(255);
 						td.style = "background-color: rgb("+col[0]+","+col[1]+","+col[2]+")";
-						td.onclick = function() {
-							setVehicleColors(modelinfo, col, col, col, col);
+						td.onclick = function(ev) {
+							carColors[0] = col;
+							carColors[2] = col;
+							setVehicleColors(modelinfo, carColors[0], carColors[1], carColors[2], carColors[3]);
+						};
+						td.oncontextmenu = function(ev) {
+							carColors[1] = col;
+							carColors[3] = col;
+							ev.preventDefault();
+							setVehicleColors(modelinfo, carColors[0], carColors[1], carColors[2], carColors[3]);
 						};
 						tr.appendChild(td);
 					}
