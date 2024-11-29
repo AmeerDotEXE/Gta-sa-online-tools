@@ -1062,6 +1062,7 @@
 					<th>Colors</th>
 					<th>Tuning</th>
 					<th>Handing</th>
+					<th>Cost</th>
 					<th>3D view</th>
 				</tr>
 			`;
@@ -1091,6 +1092,11 @@
 					};
 				}
 
+				let cost = veh.lines.handling.split(handlingRx).at(-7);
+				let sellCut = 0.03;
+				if (veh.vehicleClass == "executive") sellCut = 0.1;
+				else if (veh.vehicleClass == "richfamily") sellCut = 0.05;
+
 				let tabelElement = `
 					<tr>
 						<td class="center" title="${vehicleSummary.details}" style="color: ${vehicleSummary.color};">${vehicleSummary.icon}</td>
@@ -1103,6 +1109,7 @@
 						<td copy="${veh.lines.carcols}" class="center ${veh.lines.carcols == null ? "missing" : ""}" title="${veh.filePaths.carcols}\n${veh.lines.carcols}">${veh.lines.carcols ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carmods}" class="center ${veh.lines.carmods == null ? "missing" : ""}" title="${veh.filePaths.carmods}\n${veh.lines.carmods}">${veh.lines.carmods ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.handling}" class="center ${veh.lines.handling == null ? "missing" : ""}" title="${veh.filePaths.handling}\n${veh.lines.handling}">${veh.lines.handling ? iconsHTML.check : iconsHTML.cross}</td>
+						<td copy="${cost}" class="center" title="ownership: ${cost/2}\nsell: ${cost*sellCut}">$${cost}</td>
 						<td vehmodel="${idName}" class="center ${veh.filePaths.dff == null ? "missing" : ""}" style="cursor: pointer;">${veh.filePaths.dff == null ? "Unavailable" : "View"}</td>
 					</tr>
 				`;
