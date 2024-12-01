@@ -239,7 +239,13 @@
 		</div>
 	</div>
 	<div class="section">
-		<h3>Experimental View</h3>
+		<div style="display: flex;align-items: center;justify-content: space-between;">
+			<h3 style="margin-top: 0;">Experimental View</h3>
+			<div>
+				<button class="input" onclick="viewer3DNext(true)">&lt;</button>
+				<button class="input" onclick="viewer3DNext(false)">&gt;</button>
+			</div>
+		</div>
 		<div style="display: flex;justify-content: center;width: 100%;height:100%">
 			<table id="def-colors" style="width: fit-content;height: fit-content;">
 			  <!-- JS inserts colors here -->
@@ -1251,6 +1257,26 @@
 			if (summary.ExtraCarCols.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarCols.length} Unused CarCols:</b> ${summary.ExtraCarCols.map(x => `<span title="${carcolsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
 			if (summary.ExtraCarMods.length > 0) errorSection.innerHTML += `<b>${summary.ExtraCarMods.length} Unused CarCols:</b> ${summary.ExtraCarMods.map(x => `<span title="${carmodsLines[x].fullPath}">${x}</span>`).join(", ")}<br>`;
 		}
+		function viewer3DNext(isBack) {
+			let next = 1;
+			if (isBack == true) next = -1;
+
+			let currentModel = document.querySelector(".selected[vehmodel]")?.getAttribute("vehmodel");
+			if (currentModel == null) return;
+			let currentIndex = vehiclesList.findIndex(x => x.name == currentModel);
+			if (currentIndex == -1) return;
+			
+			let nextModel = vehiclesList[currentIndex+next];
+			while (nextModel != null && !isVehicleVisible(nextModel)) {
+				currentIndex += next;
+				nextModel = vehiclesList[currentIndex+next];
+			}
+			if (nextModel == null) return;
+			document.querySelectorAll(".selected[vehmodel]")
+				.forEach(e => e.classList.remove("selected"));
+			document.querySelector('[vehmodel="'+nextModel.name+'"]')?.classList.add("selected");
+			SelectModel(nextModel.name);
+		}
 
 
 
@@ -1639,9 +1665,9 @@
 		function updateVisibleList() {
 			if (!(searchbox instanceof HTMLInputElement)) return;
 
-			const text = searchbox.value.toLowerCase();
-			const hasTextSearch = text.length > 0;
-			const isTextNumber = !isNaN(parseInt(text)) && (parseInt(text)+"") == text;
+			// const text = searchbox.value.toLowerCase();
+			// const hasTextSearch = text.length > 0;
+			// const isTextNumber = !isNaN(parseInt(text)) && (parseInt(text)+"") == text;
 			let allVehicles = idTable.querySelectorAll("tbody:nth-child(2) > tr");
 
 			const vehiclesCountElement = document.getElementById("listed-vehicles");
@@ -1650,58 +1676,7 @@
 			allVehicles.forEach((vehElement, vehIndex) => {
 				const veh = vehiclesList[vehIndex];
 
-				let isShowing = true;
-
-				if (hasTextSearch) {
-
-					//name search
-					if (!veh.gameName?.toLowerCase().includes(text) && !veh.name.toLowerCase().includes(text)) {
-						// check for id search
-						if (isTextNumber) {
-							if (!(veh.id+"").startsWith(text)) isShowing = false;
-						} else isShowing = false;
-					}
-
-				}
-
-				//apply filters
-				if (isShowing && filters.VehEnabled != 1) {
-					if (filters.VehEnabled == 0 && veh.isDisabled) isShowing = false;
-					else if (filters.VehEnabled == 2 && !veh.isDisabled) isShowing = false;
-				}
-				if (isShowing && filters.SummaryType != 2) {
-					if (filters.SummaryType == 0 && veh.summary.errors.length == 0) isShowing = false;
-					if (filters.SummaryType == 1 && veh.summary.warnings.length == 0) isShowing = false;
-				}
-				if (isShowing && filters.CustomVeh != 1) {
-					if (filters.CustomVeh == 0 && veh.isDefault) isShowing = false;
-					else if (filters.CustomVeh == 2 && !veh.isDefault) isShowing = false;
-				}
-				if (isShowing && filters.Tuning != 1) {
-					let hasTuning = (veh.lines.carmods?.replace(/,/g, " ").slice(veh.name.length).trim()
-						.replace(/stereo/g, "")
-						.replace(/nto_b_[^ \n]+/g, "").trim() || "") != "";
-					if (filters.Tuning == 0 && !hasTuning) isShowing = false;
-					else if (filters.Tuning == 2 && veh.lines.carmods != null) isShowing = false;
-				}
-				if (isShowing && filters.Audio != 1) {
-					if (filters.Audio == 0 && veh.lines.audio == null) isShowing = false;
-					else if (filters.Audio == 2 && veh.lines.audio != null) isShowing = false;
-				}
-				if (isShowing && filters.HasColors != 1) {
-					if (filters.HasColors == 0 && veh.lines.carcols == null) isShowing = false;
-					else if (filters.HasColors == 2 && veh.lines.carcols != null) isShowing = false;
-				}
-				if (isShowing && filters.HasHandling != 1) {
-					if (filters.HasHandling == 0 && veh.lines.handling == null) isShowing = false;
-					else if (filters.HasHandling == 2 && veh.lines.handling != null) isShowing = false;
-				}
-				if (isShowing && filters.VehType != "any") {
-					if (filters.VehType != veh.type) isShowing = false;
-				}
-				if (isShowing && filters.ClassType != "any") {
-					if (filters.ClassType != veh.vehicleClass) isShowing = false;
-				}
+				let isShowing = isVehicleVisible(veh);
 
 				//display vehicle
 				if (isShowing) { vehElement.classList.remove("hidden"); showingVehiclesCount++; }
@@ -1709,6 +1684,65 @@
 			});
 
 			if (vehiclesCountElement) vehiclesCountElement.textContent = showingVehiclesCount;
+		}
+		function isVehicleVisible(veh) {
+			const text = searchbox.value.toLowerCase();
+			const hasTextSearch = text.length > 0;
+			const isTextNumber = !isNaN(parseInt(text)) && (parseInt(text)+"") == text;
+			let isShowing = true;
+
+			if (hasTextSearch) {
+
+				//name search
+				if (!veh.gameName?.toLowerCase().includes(text) && !veh.name.toLowerCase().includes(text)) {
+					// check for id search
+					if (isTextNumber) {
+						if (!(veh.id+"").startsWith(text)) isShowing = false;
+					} else isShowing = false;
+				}
+
+			}
+
+			//apply filters
+			if (isShowing && filters.VehEnabled != 1) {
+				if (filters.VehEnabled == 0 && veh.isDisabled) isShowing = false;
+				else if (filters.VehEnabled == 2 && !veh.isDisabled) isShowing = false;
+			}
+			if (isShowing && filters.SummaryType != 2) {
+				if (filters.SummaryType == 0 && veh.summary.errors.length == 0) isShowing = false;
+				if (filters.SummaryType == 1 && veh.summary.warnings.length == 0) isShowing = false;
+			}
+			if (isShowing && filters.CustomVeh != 1) {
+				if (filters.CustomVeh == 0 && veh.isDefault) isShowing = false;
+				else if (filters.CustomVeh == 2 && !veh.isDefault) isShowing = false;
+			}
+			if (isShowing && filters.Tuning != 1) {
+				let hasTuning = (veh.lines.carmods?.replace(/,/g, " ").slice(veh.name.length).trim()
+					.replace(/stereo/g, "")
+					.replace(/nto_b_[^ \n]+/g, "").trim() || "") != "";
+				if (filters.Tuning == 0 && !hasTuning) isShowing = false;
+				else if (filters.Tuning == 2 && veh.lines.carmods != null) isShowing = false;
+			}
+			if (isShowing && filters.Audio != 1) {
+				if (filters.Audio == 0 && veh.lines.audio == null) isShowing = false;
+				else if (filters.Audio == 2 && veh.lines.audio != null) isShowing = false;
+			}
+			if (isShowing && filters.HasColors != 1) {
+				if (filters.HasColors == 0 && veh.lines.carcols == null) isShowing = false;
+				else if (filters.HasColors == 2 && veh.lines.carcols != null) isShowing = false;
+			}
+			if (isShowing && filters.HasHandling != 1) {
+				if (filters.HasHandling == 0 && veh.lines.handling == null) isShowing = false;
+				else if (filters.HasHandling == 2 && veh.lines.handling != null) isShowing = false;
+			}
+			if (isShowing && filters.VehType != "any") {
+				if (filters.VehType != veh.type) isShowing = false;
+			}
+			if (isShowing && filters.ClassType != "any") {
+				if (filters.ClassType != veh.vehicleClass) isShowing = false;
+			}
+
+			return isShowing;
 		}
 
 
