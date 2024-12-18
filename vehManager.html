@@ -242,6 +242,7 @@
 		<div style="display: flex;align-items: center;justify-content: space-between;">
 			<h3 style="margin-top: 0;">Experimental View</h3>
 			<div>
+				<button class="input" onclick="viewerScrollSelected()">↓</button>
 				<button class="input" onclick="viewer3DNext(true)">&lt;</button>
 				<button class="input" onclick="viewer3DNext(false)">&gt;</button>
 			</div>
@@ -1276,6 +1277,12 @@
 				.forEach(e => e.classList.remove("selected"));
 			document.querySelector('[vehmodel="'+nextModel.name+'"]')?.classList.add("selected");
 			SelectModel(nextModel.name);
+		}
+		function viewerScrollSelected() {
+			let currentModel = document.querySelector(".selected[vehmodel]");
+			if (currentModel == null) return;
+
+			currentModel.scrollIntoView();
 		}
 
 
