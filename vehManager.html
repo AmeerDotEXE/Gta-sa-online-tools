@@ -239,7 +239,7 @@
 			<button class="input" onclick="modifyVehiclesName()" title="Changes names for a list of vehicles using regex">Modify Vehicles Names</button>
 		</div>
 	</div>
-	<div class="section">
+	<div class="section" id="viewer3d">
 		<div style="display: flex;align-items: center;justify-content: space-between;">
 			<h3 style="margin-top: 0;">Experimental View</h3>
 			<div>
@@ -1178,11 +1178,22 @@
 				let text = element.getAttribute("vehmodel");
 				if ((text || "") == "" || text == "undefined") return;
 				
-				element.addEventListener("click", () => {
+				element.addEventListener("click", (e) => {
 					document.querySelectorAll(".selected[vehmodel]")
 						.forEach(e => e.classList.remove("selected"));
 					element.classList.add("selected");
 					SelectModel(text);
+				});
+				element.addEventListener("contextmenu", (e) => {
+					e.preventDefault();
+					document.querySelectorAll(".selected[vehmodel]")
+						.forEach(e => e.classList.remove("selected"));
+					element.classList.add("selected");
+					SelectModel(text);
+					let viewer3D = document.querySelector("#viewer3d");
+					if (viewer3D == null) return;
+
+					viewer3D.scrollIntoView();
 				});
 			});
 
