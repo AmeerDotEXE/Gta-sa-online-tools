@@ -201,29 +201,31 @@ function loadCarVC(CurrentModel)
 	});
 }
 
-function loadCarSA(CurrentModel)
+async function loadCarSA(car, callback)
 {
-	
-	if (CurrentModel.filePaths.dff == null) return;
-	// console.log(CurrentModel);
+	if (car.filePaths.dff == null) return;
+	// console.log(car);
+	CurrentModel = car;
 
-	loadModelTXD(CurrentModel.filePaths.txd, function(txdDir) {
-		myTxd = txdDir;
-		loadDFF(CurrentModel.filePaths.dff, function(clump){
-			myclump = clump;
-			allVehWheels = [];
-			camScroll = true;
-			modelinfo = processVehicle(myclump);
-			setupSACar(myclump);
-			setVehicleColors(modelinfo,
-				carColors[0], carColors[1], carColors[2], carColors[3]);
-			// setVehicleLightColors(modelinfo,
-			// 	[ 128, 0, 0, 255 ],
-			// 	[ 128, 0, 0, 255 ],
-			// 	[ 128, 0, 0, 255 ],
-			// 	[ 128, 0, 0, 255 ]);
-			main();
-		});
+	let txdDir = await loadModelTXD(car.filePaths.txd);
+	myTxd = txdDir;
+	await loadDFF(car.filePaths.dff, function(clump){
+		myclump = clump;
+		allVehWheels = [];
+		//camScroll = true;
+		modelinfo = processVehicle(myclump);
+		setupSACar(myclump);
+		setVehicleColors(modelinfo,
+			carColors[0], carColors[1], carColors[2], carColors[3]);
+		// setVehicleLightColors(modelinfo,
+		// 	[ 128, 0, 0, 255 ],
+		// 	[ 128, 0, 0, 255 ],
+		// 	[ 128, 0, 0, 255 ],
+		// 	[ 128, 0, 0, 255 ]);
+		main();
+		if (typeof callback == "function") {
+			callback();
+		}
 	});
 }
 
@@ -241,11 +243,35 @@ function removeChildren(x)
 		x.removeChild(x.firstChild);
 }
 
+function findNodeInFrame(frame, name) {
+	if (frame.name == name) return frame;
+
+	let temp = frame.next;
+	while (temp != null && temp.name != name) temp = temp.next;
+	if (temp?.name == name) return temp;
+
+	temp = frame;
+	while (temp != null) {
+		if (temp.child == null) {
+			temp = temp.next;
+			continue;
+		}
+		let result = findNodeInFrame(temp.child, name);
+		if (result != null) return result;
+		temp = temp.next;
+	}
+	return null;
+}
+
 function main()
 {
-	// let ul = document.getElementById('frames');
-	// removeChildren(ul);
-	// displayFrames(myclump.frame, ul);
+	//let ul = document.getElementById('veh-hir');
+	//removeChildren(ul);
+	//displayFrames(myclump.frame, ul);
+
+	//let spoilerPlace = findNodeInFrame(myclump.frame, "ug_spoiler");
+	//if (CurrentModel.lines.carmods?.includes("spl_") && spoilerPlace == null)
+	//	console.warn("===============================", "spoiler", CurrentModel, "===============================");
 
 	if(!running){
 		running = true;
@@ -402,9 +428,9 @@ function processVehicle(clump)
 			// clump.atomics.push(cleanA)
 			// console.log("oldA", a);
 			// f.name = "rfWheel"
-			let lfWheelParent = f.parent.parent.child;
-			let lbWheelParent = f.parent.parent.child;
-			let rbWheelParent = f.parent.parent.child;
+			let lfWheelParent = f.parent.parent?.child;
+			let lbWheelParent = f.parent.parent?.child;
+			let rbWheelParent = f.parent.parent?.child;
 			while (lfWheelParent != null && !lfWheelParent.name.startsWith("wheel_lf"))
 				lfWheelParent = lfWheelParent.next
 			while (lbWheelParent != null && !lbWheelParent.name.startsWith("wheel_lb"))
@@ -414,20 +440,24 @@ function processVehicle(clump)
 
 			// console.log("nextWheel", nextWheel, f)
 			var lfWheel = CreateWheelFromOriginal(a, lfWheelParent)
-			lfWheel.frame.ltm[0] *= -1
-			clump.atomics.push(lfWheel)
+			if (lfWheelParent) {
+				lfWheel.frame.ltm[0] *= -1
+				clump.atomics.push(lfWheel)
+			}
 
 			var lbWheel = CreateWheelFromOriginal(lfWheel, lbWheelParent)
-			lbWheel.frame.ltm[0] *= -1
-			clump.atomics.push(lbWheel)
+			if (lbWheelParent) {
+				lbWheel.frame.ltm[0] *= -1
+				clump.atomics.push(lbWheel)
+			}
 
 			var rbWheel = CreateWheelFromOriginal(lbWheel, rbWheelParent)
-			clump.atomics.push(rbWheel)
+			if (rbWheelParent) clump.atomics.push(rbWheel)
 
 			allVehWheels.push(a.frame);
-			allVehWheels.push(lfWheel.frame);
-			allVehWheels.push(lbWheel.frame);
-			allVehWheels.push(rbWheel.frame);
+			if (lfWheelParent) allVehWheels.push(lfWheel.frame);
+			if (lbWheelParent) allVehWheels.push(lbWheel.frame);
+			if (rbWheelParent) allVehWheels.push(rbWheel.frame);
 		}
 		findEditableMaterials(a.geometry, vehicleInfo);
 	}
@@ -492,43 +522,37 @@ function drawScene(deltaTime)
 }
 
 
-function loadDFF(filepath, cb)
+async function loadDFF(filepath, cb)
 {
-	files[filepath]?.file.arrayBuffer()
-	.then(arrayBuffer => {
-		if(!arrayBuffer) return;
+	let arrayBuffer = await files[filepath]?.file.arrayBuffer()
+	if(!arrayBuffer) return;
 
-		stream = RwStreamCreate(arrayBuffer);
+	stream = RwStreamCreate(arrayBuffer);
 
-		if(RwStreamFindChunk(stream, rwID_CLUMP)){
-			let c = RpClumpStreamRead(stream);
-			if(c != null)
-				cb(c);
-		}
-		return null;
-		
-	});
+	if(RwStreamFindChunk(stream, rwID_CLUMP)){
+		let c = RpClumpStreamRead(stream);
+		if(c != null)
+			cb(c);
+	}
+	return null;
 }
 
-function loadModelTXD(filepath, cb)
+async function loadModelTXD(filepath)
 {
-	files[filepath]?.file.arrayBuffer()
-	.then(arrayBuffer => {
-		if(!arrayBuffer) return;
+	let arrayBuffer = await files[filepath]?.file.arrayBuffer()
+	if(!arrayBuffer) return;
 
-		stream = RwStreamCreate(arrayBuffer);
-		// console.log(arrayBuffer, stream);
+	stream = RwStreamCreate(arrayBuffer);
+	// console.log(arrayBuffer, stream);
 
-		if(RwStreamFindChunk(stream, rwID_TexDictionary)){
-			// console.log(stream)
-			let c = RpTexDictionaryStreamRead(stream);
-			// console.log("tex dictionary", c);
-			if(c != null)
-				cb(c);
-		}
-		// console.log(false)
-		return null;
-	});
+	if(RwStreamFindChunk(stream, rwID_TexDictionary)){
+		// console.log(stream)
+		let c = RpTexDictionaryStreamRead(stream);
+		// console.log("tex dictionary", c);
+		return c;
+	}
+	// console.log(false)
+	return null;
 }
 function fetchModelTXD(filepath, cb)
 {

@@ -237,6 +237,7 @@
 			<button class="input" onclick="modifyVehiclesIds()" title="Changes a list of vehicles ids to another range">Modify Vehicles Ids</button>
 			<button class="input" onclick="vehiclesSeparator()" title="Saparates existing vehicles from new ones">Vehicles Separator</button>
 			<button class="input" onclick="modifyVehiclesName()" title="Changes names for a list of vehicles using regex">Modify Vehicles Names</button>
+			<button class="input" onclick="loadAllModels3D()" title="Loads each car and takes its picture">Take 3D Pics of cars</button>
 		</div>
 	</div>
 	<div class="section" id="viewer3d">
@@ -257,6 +258,7 @@
 			  <!-- JS inserts colors here -->
 			</table>
 		</div>
+		<ul id="veh-hir"></ul>
 	</div>
 	<div class="section">
 		<h3>Filters</h3>
@@ -415,6 +417,7 @@
 		</div>
 	</div>
 
+	<script src="./jszip.min.js"></script>
 	<script src="./vehviewer/gl-matrix.js"></script>
 	<script src="./vehviewer/gl-util.js"></script>
 	<script src="./vehviewer/rw.js"></script>
@@ -1103,7 +1106,7 @@
 					};
 				}
 
-				let cost = veh.lines.handling.split(handlingRx).at(-7);
+				let cost = veh.lines.handling?.split(handlingRx).at(-7);
 				veh.cost = cost;
 				let sellCut = 0.03;
 				if (veh.vehicleClass == "executive") sellCut = 0.1;
@@ -1677,7 +1680,58 @@
 
 			popup.classList.add("active");
 		}
-		
+		async function loadAllModels3D() {
+			const errorSection = document.getElementById("summary-errors");
+			const canvas = document.getElementById("glcanvas");
+			var zip = new JSZip();
+			camScroll = false;
+
+			let vehs = vehiclesList.filter(x => !x.isDefault && !x.isDisabled);
+			for (let carIndex = 0; carIndex < vehs.length; carIndex++) {
+				const car = vehs[carIndex];
+				if (car.filePaths.dff == null) continue;
+
+				car.colors = [];
+				if (carcolsLines[car.name]?.line) {
+					let line = carcolsLines[car.name].line.replace(/,/g, " ").replace(/#.*/g, "").trim().toLowerCase();
+					let fields = line.split(/[\t ]+/);
+					if (carcolsLines[car.name].line.split(",")[3]?.includes(" ") === false) {
+						LoadVehicleColour4(fields);
+					} else LoadVehicleColour(fields);
+				}
+				try {
+					if (car.colors[0] != null) SetCarColors(car.colors[0]);
+				} catch {}
+				await loadOneCar(car).then(() => {
+					//console.log("loaded veh:", car.id, car.name);
+					drawScene(0);
+					let zeData = canvas.toDataURL("image/jpeg").split(';base64,')[1];
+					zip.file("Custom$"+car.id+".jpeg", zeData, {base64: true});
+				}).catch(() => {
+					console.warn("crash veh:", car.id, car.name);
+					errorSection.innerHTML += car.id + ", <br>";
+				});
+			}
+			zip.generateAsync({type:"blob"})
+			.then(function(content) {
+				// see FileSaver.js
+				//saveAs(content, "cars.zip");
+				var blobUrl = URL.createObjectURL(content)
+				console.log(blobUrl);
+				window.location.href = blobUrl;
+			});
+
+			function loadOneCar(car) {
+				return new Promise((res, rej) => {
+					loadCarSA(car, () => {
+						res();
+					}).catch(() => {
+						rej();
+					});
+				});
+			}
+		}
+
 		function updateSearch() {
 			updateVisibleList();
 		}
