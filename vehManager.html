@@ -630,6 +630,29 @@
 				updateFilesToIdList();
 			});
 		}, false);
+		document.addEventListener("keypress", (event) => {
+			if (event.defaultPrevented) { return; }
+			switch (event.key) {
+			case "ArrowDown":
+				viewerScrollSelected()
+				break;
+			case "ArrowUp":
+				let viewer3D = document.querySelector("#viewer3d");
+				if (viewer3D == null) return;
+
+				viewer3D.scrollIntoView();
+				break;
+			case "ArrowLeft":
+				viewer3DNext(true);
+				break;
+			case "ArrowRight":
+				viewer3DNext(false);
+				break;
+			default: return;
+			}
+
+			event.preventDefault();
+		});
 
 
 		//filter options
