@@ -630,7 +630,7 @@
 				updateFilesToIdList();
 			});
 		}, false);
-		document.addEventListener("keypress", (event) => {
+		document.addEventListener("keydown", (event) => {
 			if (event.defaultPrevented) { return; }
 			switch (event.key) {
 			case "ArrowDown":
