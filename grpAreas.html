@@ -414,8 +414,8 @@
 				item.file(function(file) {
 					// console.log(path, "File:", path + file.name, file);
 					if (file.name.toLowerCase() == "sanvivegrp.json") loadGrpAreas(path, file);
-					if (file.name.toLowerCase() == "vehicles.ide") addFileToIdList(path, file);
-					if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(path, file);
+					//if (file.name.toLowerCase() == "vehicles.ide") addFileToIdList(path, file);
+					//if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(path, file);
 				});
 				return new Promise((resolve, reject) => {resolve()});
 			} else if (item.isDirectory) {
