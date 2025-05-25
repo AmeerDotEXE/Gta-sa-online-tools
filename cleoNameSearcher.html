@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Cleo Name Search</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+		b {
+			color: #ffa;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+
+
+		#script-search {
+			width: 100%;
+			margin-bottom: 1rem;
+			background: #ccc;
+			border: 0;
+			padding: 0.5rem 1rem;
+			border-radius: 0.5rem;
+			box-sizing: border-box;
+		}
+
+
+		#script-table {
+			width: 100%;
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<input id="script-search" placeholder="search"></input>
+
+	<table id="script-table">
+		<tbody id="script-table-body"></tbody>
+	</table>
+
+	<script>
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const scriptSearch = document.getElementById("script-search");
+		const scriptTable = document.getElementById("script-table-body");
+		let searchThread = null;
+		/** @type {{
+		 * name: string;
+		 * path: string;
+		 * size: number;
+		 * text: string;
+		 * }[]} */
+		let allFiles = [];
+		
+		let fileCount = 0;
+		let filesLoading = 0;
+		let files = {};
+
+
+		let dropArea = document;
+		// dropArea.addEventListener('dragenter', handlerFunction, false)
+		// dropArea.addEventListener('dragleave', handlerFunction, false)
+		// dropArea.addEventListener('dragover', handlerFunction, false)
+		// dropArea.addEventListener('drop', handlerFunction, false)
+		scriptSearch.addEventListener("input", () => {
+			updateFilesToIdList();
+		});
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			console.log(event);
+			event.preventDefault();
+    		event.stopPropagation();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			let spawnedThreads = [];
+			for (var i=0; i<items.length; i++) {
+				var item = items[i].webkitGetAsEntry();
+				if (!item) continue;
+
+				spawnedThreads.push(traverseFileTree(item));
+			}
+
+			Promise.all(spawnedThreads).then(() => {
+				//folderUpload.classList.remove("active");
+				updateFilesToIdList();
+			});
+		}, false);
+		
+		async function traverseFileTree(item, path) {
+			path = path || "";
+			if (item.isFile) {
+				// Get file
+				item.file(function(file) {
+					// console.log("File:", path + file.name);
+					if (file.name.toLowerCase().endsWith(".cs")) addFileToIdList(path, file);
+					// if (path.split("/").slice(1).join("/").toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			} else if (item.isDirectory) {
+				// Get folder contents
+				var dirReader = item.createReader();
+				const enteriesReader = async () => {
+					await new Promise((resolve, reject) => {
+						dirReader.readEntries(async function(entries) {
+							//fileCount += entries.filter((x) => x.isFile).length;
+
+							let isGameFolder = entries.find((x) => x.name.toLowerCase() == "vorbis.dll" && x.isFile) != null;
+							let itemName = item.name + "/";
+							if (isGameFolder) itemName = "";
+							// console.log(item, path, isGameFolder);
+
+							let spawnedThreads = [];
+							for (var i=0; i < entries.length; i++) {
+								spawnedThreads.push(traverseFileTree(entries[i], path + itemName));
+							}
+
+							//reads 100 more
+							if (entries.length >= 99) await enteriesReader();
+							
+							await Promise.all(spawnedThreads);
+
+							resolve();
+						});
+					});
+				};
+				return enteriesReader();
+			}
+		}
+
+		function addFileToIdList(path, file) {
+			fileCount++;
+			console.log("File:", file.name);
+			let newFile = {
+				name: file.name,
+				path,
+				fullPath: path+file.name,
+				size: file.size,
+				file,
+			};
+			//allFiles.push(newFile);
+			files[newFile.fullPath] = newFile;
+
+			//newFile.text.then(x => newFile.text = x).then(updateFilesToIdList);
+			filesLoading++;
+			waitFileObjLoad(newFile);
+		}
+		async function waitFileObjLoad(fileObj) {
+			if (fileObj.text instanceof Promise) await fileObj.text;
+			if (fileObj.isLoaded == true) return;
+			fileObj.text = fileObj.file.text();
+
+			await fileObj.text
+			.then(x => {
+				fileObj.text = x;
+				fileObj.isLoaded = true;
+				filesLoading--;
+			})
+			//.then(updateFilesToIdList);
+		}
+		async function updateFilesToIdList() {
+			let loadedFilesCount = Object.keys(files).length;
+			while (loadedFilesCount < fileCount) {
+				folderUpload.textContent = "Loaded "+loadedFilesCount+" out of "+fileCount+" files.";
+				await new Promise((res) => setTimeout(res, 250));
+				loadedFilesCount = Object.keys(files).length;
+			}
+			if (loadedFilesCount !== fileCount) return;
+
+			let readingFilesCount = Object.values(files).filter(x => x.text instanceof Promise).length;
+			while (readingFilesCount > 0) {
+				folderUpload.textContent = "Reading "+readingFilesCount+" file(s)";
+				await Object.values(files).find(x => x.text instanceof Promise).text;
+				readingFilesCount = Object.values(files).filter(x => x.text instanceof Promise).length;
+			}
+			if (readingFilesCount > 0) return;
+
+			folderUpload.textContent = "All files are loaded.";
+			await new Promise((res) => setTimeout(res, 1));
+			folderUpload.classList.remove("active");
+			scriptTable.innerHTML = `
+				<tr>
+					<th>line number</th>
+					<th>line</th>
+					<th>file</th>
+				</tr>
+			`;
+			// await Promise.all(allFiles.map(x => x.text)).then(promiseResults => {
+			// 	allFiles.forEach((x,xi) => {
+			// 		x.text = promiseResults[xi];
+			// 	});
+			// });
+
+			const updateTable = () => {
+				if (scriptSearch.value == "") return;
+				let completedFiles = 0;
+				let searchField = scriptSearch.value;
+				let wholeTable = ``;
+				Object.values(files).forEach((file, filei) => {
+					// setTimeout((file) => {
+						if (file.text == null) {
+							console.log("no text file: ", file);
+							return;
+						}
+						let foundlines = file.text.toLowerCase().split(searchField.toLowerCase());
+						completedFiles++;
+						console.log("loading file", completedFiles, "out of", Object.values(files).length);
+						if (foundlines.length == 1) return;
+						let charsRead = 0;
+						foundlines.forEach((x,xi) => {
+							if (foundlines.length == xi + 1) return;
+
+							charsRead += x.length + searchField.length;
+							if (xi != 0) charsRead -= x.split("\n")[0].length;
+							if (foundlines.length !== xi + 1) charsRead += foundlines[xi+1].split("\n")[0].length;
+
+							let allLinesTillThis = file.text.slice(0, charsRead).split("\n");
+							let currentLine = allLinesTillThis.slice(-1)[0];
+							let lineChar = currentLine.toLowerCase().indexOf(searchField.toLowerCase());
+							let tabelElement = `
+								<tr>
+									<td>${parseInt(allLinesTillThis.length)}</td>
+									<td>${escapeHTML(currentLine.slice(0, lineChar)) + "<b>" + escapeHTML(currentLine.slice(lineChar, lineChar+searchField.length)) + "</b>" + escapeHTML(currentLine.slice(lineChar+searchField.length))}</td>
+									<td>${escapeHTML(file.path + file.name)}</td>
+								</tr>
+							`;
+							wholeTable += tabelElement;
+							// idTable.innerHTML += tabelElement;
+						});
+					// }, filei+1, filee);
+				});
+
+				console.log("DONE");
+				scriptTable.innerHTML += wholeTable;
+				searchThread = null;
+			}
+			if (searchThread != null) clearTimeout(searchThread);
+			searchThread = setTimeout(updateTable, 3000);
+		}
+
+
+		function escapeHTML(...text) {
+			let temp = document.createElement('div');
+			temp.textContent = text.join('');
+			let result = temp.innerHTML;
+			temp.remove();
+			return result;
+		}
+	</script>
+</body>
+</html>

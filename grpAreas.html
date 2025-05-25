@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+
+			background-color: #333;
+			color: #ddd;
+		}
+
+		body {
+			padding: 3rem;
+			box-sizing: border-box;
+		}
+
+		
+		#gta-folder-upload:not(.active) {
+			padding: 1rem;
+			border: 1px solid;
+			border-radius: 1rem;
+			text-align: center;
+
+			margin-bottom: 1rem;
+			display: none;
+		}
+		#gta-folder-upload.active {
+			position: fixed;
+			top: 3rem;
+			left: 3rem;
+			width: calc(100% - (2 * 3rem));
+			height: calc(100% - (2 * 3rem));
+
+			border-radius: 1rem;
+			background-color: #222;
+			outline: 0.25rem dashed #aaa;
+			user-select: none;
+			z-index: 999;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 42px;
+			font-weight: 700;
+			font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+		}
+
+		.work-area {
+			height: 100%;
+			display: flex;
+		}
+		.map-container {
+			height: 100%;
+			width: fit-content;
+			position: relative;
+			display: flex;
+		}
+		.map-container .region {
+			position: absolute;
+			opacity: 0.2;
+		}
+		.map-container .region:hover {
+			position: absolute;
+			opacity: 0.6;
+		}
+
+		.controls {
+			width: 100%;
+			margin-left: 3rem;
+			padding: 0.5rem;
+			overflow-y: auto;
+			overflow-x: hidden;
+		}
+
+		[data-page]:not(.active) {
+			display: none;
+		}
+
+		.grpArea,
+		.vehicle-group {
+			background-color: #444;
+			padding: 1rem 2rem;
+			margin-bottom: 1rem;
+			border-radius: 8px;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+	<div id="gta-folder-upload" class="active">Drag & Drop your gta folder here...</div>
+	<div id="id-status"></div>
+
+	<div class="work-area">
+		<div class="map-container">
+			<img src="https://www.gta-sanandreas.com/guides/maps/gta-san-andreas-map.webp" style="scale: 107%;transform: translate(4px, -3px);" alt="">
+		</div>
+		<div class="controls">
+			<div data-page="area-list" id="area-list" class="active">
+				<button id="add-area">Add new Area</button>
+				<button id="download-btn">Download</button>
+				<h3 id="areas-header">Areas</h3>
+			</div>
+			<div data-page="area">
+				<button id="back-to-area-list">back</button>
+				<button id="add-vehgroup-to-area">add vehicle group</button>
+				<ul id="area-regions"></ul>
+				<hr>
+				<div id="vehicle-groups"></div>
+			</div>
+			<div data-page="vehicle-group">
+				<button id="back-to-area">back</button>
+				<hr>
+				<h4>Time</h4>
+				<ul>
+					<li><label><input type="checkbox" id="is-morning">Morning</label></li>
+					<li><label><input type="checkbox" id="is-noon">Noon</label></li>
+					<li><label><input type="checkbox" id="is-afternoon">Afternoon</label></li>
+					<li><label><input type="checkbox" id="is-evening">Evening</label></li>
+					<li><label><input type="checkbox" id="is-night">Night</label></li>
+					<li><label><input type="checkbox" id="is-midnight">Midnight</label></li>
+				</ul>
+				<hr>
+				<h4>Weekdays</h4>
+				<ul>
+					<li><label><input type="checkbox" id="is-sunday">Sunday</label></li>
+					<li><label><input type="checkbox" id="is-monday">Monday</label></li>
+					<li><label><input type="checkbox" id="is-tuesday">Tuesday</label></li>
+					<li><label><input type="checkbox" id="is-wednesday">Wednesday</label></li>
+					<li><label><input type="checkbox" id="is-thursday">Thursday</label></li>
+					<li><label><input type="checkbox" id="is-friday">Friday</label></li>
+					<li><label><input type="checkbox" id="is-saturday">Saturday</label></li>
+				</ul>
+				<hr>
+				<h4>Weather</h4>
+				<ul>
+					<li><label><input type="checkbox" id="is-la-extra-sunny">LA Extra Sunny</label></li>
+					<li><label><input type="checkbox" id="is-la-sunny">LA Sunny</label></li>
+					<li><label><input type="checkbox" id="is-la-extra-sunny-smog">LA Extra Sunny Smog</label></li>
+					<li><label><input type="checkbox" id="is-la-sunny-smog">LA Sunny Smog</label></li>
+					<li><label><input type="checkbox" id="is-la-cloudy">LA Cloudy</label></li>
+					<li><label><input type="checkbox" id="is-sf-sunny">SF Sunny</label></li>
+					<li><label><input type="checkbox" id="is-sf-extra-sunny">SF Extra Sunny</label></li>
+					<li><label><input type="checkbox" id="is-sf-cloudy">SF Cloudy</label></li>
+					<li><label><input type="checkbox" id="is-sf-rainy">SF Rainy</label></li>
+					<li><label><input type="checkbox" id="is-sf-foggy">SF Foggy</label></li>
+					<li><label><input type="checkbox" id="is-vegas-sunny">Vegas Sunny</label></li>
+					<li><label><input type="checkbox" id="is-vegas-extra-sunny">Vegas Extra Sunny</label></li>
+					<li><label><input type="checkbox" id="is-vegas-cloudy">Vegas Cloudy</label></li>
+					<li><label><input type="checkbox" id="is-countryside-extra-sunny">Countryside Extra Sunny</label></li>
+					<li><label><input type="checkbox" id="is-countryside-sunny">Countryside Sunny</label></li>
+					<li><label><input type="checkbox" id="is-countryside-cloudy">Countryside Cloudy</label></li>
+					<li><label><input type="checkbox" id="is-countryside-rainy">Countryside Rainy</label></li>
+					<li><label><input type="checkbox" id="is-desert-extra-sunny">Desert Extra Sunny</label></li>
+					<li><label><input type="checkbox" id="is-desert-sunny">Desert Sunny</label></li>
+					<li><label><input type="checkbox" id="is-desert-sandstorm">Desert Sandstorm</label></li>
+					<li><label><input type="checkbox" id="is-underwater">Underwater</label></li>
+					<li><label><input type="checkbox" id="is-extra-colours-1">Extra Colours 1</label></li>
+					<li><label><input type="checkbox" id="is-extra-colours-2">Extra Colours 2</label></li>
+				</ul>
+				<hr>
+				<h4>Vehicle Density</h4>
+				<label>
+					<span></span>
+					<input type="range" min="0" max="3" step="0.1" style="width: 100%;" id="density-mult">
+				</label>
+				<hr>
+				<h4>Vehicles</h4>
+				<div id="vehicles-list">
+					<input type="text" id="vehicles-search">
+				</div>
+				<div style="height: 300px;"></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const folderUpload = document.getElementById("gta-folder-upload");
+		const idStatus = document.getElementById("id-status");
+		const mapContainerEl = document.querySelector(".map-container");
+		const areaListEl = document.getElementById("area-list");
+		let usedIds = [];
+		/** @type {{
+		 * name: string;
+		 * path: string;
+		 * size: number;
+		 * text: string;
+		 * }[]} */
+		let allFiles = [];
+		let conflictIds = [];
+		let idList = {};
+		window.availabeIds = [];
+
+		let grpAreas = [];
+		let selectedArea = null;
+		let selectedVehicleGroup = null;
+
+		const eTimeType = [
+			"Morning",
+			"Noon",
+			"Afternoon",
+			"Evening",
+			"Night",
+			"Midnight",
+		];
+		const eWeekdays = [
+			"Sunday",
+			"Monday",
+			"Tuesday",
+			"Wednesday",
+			"Thursday",
+			"Friday",
+			"Saturday",
+		];
+		const eWeatherType = [
+			"LA Extra Sunny",
+			"LA Sunny",
+			"LA Extra Sunny Smog",
+			"LA Sunny Smog",
+			"LA Cloudy",
+			"SF Sunny",
+			"SF Extra Sunny",
+			"SF Cloudy",
+			"SF Rainy",
+			"SF Foggy",
+			"Vegas Sunny",
+			"Vegas Extra Sunny",
+			"Vegas Cloudy",
+			"Countryside Extra Sunny",
+			"Countryside Sunny",
+			"Countryside Cloudy",
+			"Countryside Rainy",
+			"Desert Extra Sunny",
+			"Desert Sunny",
+			"Desert Sandstorm",
+			"Underwater",
+			"Extra Colours 1",
+			"Extra Colours 2",
+		];
+
+		fetch("https://library.sannybuilder.com/assets/sa/maps/locations/info.zon.json").then(res => res.json()).then(data => {
+			console.log(data);
+			if (!data) return;
+			if (data.length == 0) return;
+
+			mapContainerEl.append(...data.map(region => {
+				const regionEl = document.createElement("div");
+
+				regionEl.classList.add("region");
+				regionEl.title = region.name;
+				regionEl.style.backgroundColor = region.color.padEnd(7, "0");
+
+				const pos = [
+					((region.vertices[0][0] + 3000) / 60),
+					((region.vertices[0][1] + 3000) / 60),
+				];
+				const size = [
+					((region.vertices[3][0] - region.vertices[0][0]) / 60),
+					((region.vertices[1][1] - region.vertices[0][1]) / 60),
+				];
+
+				regionEl.style.left = pos[0]+"%";
+				regionEl.style.top = (100 - pos[1] - size[1]) + "%";
+				regionEl.style.width = size[0] + "%";
+				regionEl.style.height = size[1] + "%";
+
+				regionEl.addEventListener("click", () => {
+					if (selectedArea == null) return;
+
+					if (selectedArea.regions.includes(region.name))
+						selectedArea.regions.splice(selectedArea.regions.indexOf(region.name), 1)
+					else selectedArea.regions.push(region.name);
+					updateAreaMenu(selectedArea);
+				});
+
+				return regionEl
+			}));
+		});
+
+		
+		let dropArea = document;
+		dropArea.addEventListener("dragover", function(event) {
+			event.preventDefault();
+    		event.stopPropagation();
+		});
+		dropArea.addEventListener("drop", async function(event) {
+			event.preventDefault();
+
+			var items = event.dataTransfer.items;
+			if (items.length == 0) return;
+
+			let waitingList = [];
+			for (var i=0; i<items.length; i++) {
+				// webkitGetAsEntry is where the magic happens
+				var item = items[i].webkitGetAsEntry();
+				if (item) {
+					let result = traverseFileTree(item);
+					waitingList.push(result);
+				}
+			}
+			await Promise.all(waitingList);
+
+			updateFilesToIdList();
+		}, false);
+
+		document.getElementById("add-area")?.addEventListener("click", () => {
+			grpAreas.push({
+				regions: [],
+				vehicles: [],
+			});
+			updateAreaList();
+		});
+		document.getElementById("download-btn")?.addEventListener("click", () => {
+			const jGrpAreas = JSON.stringify(grpAreas);
+			makeTextFile(jGrpAreas, "SanviveGrp.json");
+		});
+		document.getElementById("add-vehgroup-to-area")?.addEventListener("click", () => {
+			selectedArea.vehicles.push({
+				time: [],
+				weekdays: [],
+				weather: [],
+				ids: [],
+				densityMultiplier: 1.0
+			});
+			updateAreaMenu(selectedArea);
+		});
+		document.getElementById("back-to-area-list")?.addEventListener("click", () => {
+			// close other menus
+			document.querySelectorAll("[data-page]")
+			.forEach(p => p.classList.remove("active"));
+			
+			// enable our page
+			document.querySelector(`[data-page="area-list"]`)?.classList.add("active");
+
+			updateAreaList();
+			selectedArea = null;
+		});
+		document.getElementById("back-to-area")?.addEventListener("click", () => {
+			// close other menus
+			document.querySelectorAll("[data-page]")
+			.forEach(p => p.classList.remove("active"));
+			
+			// enable our page
+			document.querySelector(`[data-page="area"]`)?.classList.add("active");
+			
+			updateAreaMenu(selectedArea);
+			selectedVehicleGroup = null;
+		});
+		for (let timeIndex = 0; timeIndex < eTimeType.length; timeIndex++) {
+			const timeType = eTimeType[timeIndex];
+			const timeTypeCheckbox = document.querySelector(`#is-${timeType.toLowerCase()}`);
+			if (!timeTypeCheckbox) throw Error("time type checkbox doesn't exist " + timeType);
+
+			timeTypeCheckbox.addEventListener("input", () => {
+				if (!selectedVehicleGroup) return;
+
+				if (selectedVehicleGroup.time.includes(timeIndex))
+					selectedVehicleGroup.time.splice(selectedVehicleGroup.time.indexOf(timeIndex), 1);
+				else selectedVehicleGroup.time.push(timeIndex);
+			});
+		}
+		for (let timeIndex = 0; timeIndex < eWeekdays.length; timeIndex++) {
+			const timeType = eWeekdays[timeIndex];
+			const timeTypeCheckbox = document.querySelector(`#is-${timeType.toLowerCase()}`);
+			if (!timeTypeCheckbox) throw Error("weekday checkbox doesn't exist " + timeType);
+
+			timeTypeCheckbox.addEventListener("input", () => {
+				if (!selectedVehicleGroup) return;
+
+				if (selectedVehicleGroup.weekdays.includes(timeIndex))
+					selectedVehicleGroup.weekdays.splice(selectedVehicleGroup.weekdays.indexOf(timeIndex), 1);
+				else selectedVehicleGroup.weekdays.push(timeIndex);
+			});
+		}
+		for (let timeIndex = 0; timeIndex < eWeatherType.length; timeIndex++) {
+			const timeType = eWeatherType[timeIndex];
+			const timeTypeCheckbox = document.querySelector(`#is-${timeType.toLowerCase().replace(/ /g, "-")}`);
+			if (!timeTypeCheckbox) throw Error("weekday checkbox doesn't exist " + timeType);
+
+			timeTypeCheckbox.addEventListener("input", () => {
+				if (!selectedVehicleGroup) return;
+
+				if (selectedVehicleGroup.weather.includes(timeIndex))
+					selectedVehicleGroup.weather.splice(selectedVehicleGroup.weather.indexOf(timeIndex), 1);
+				else selectedVehicleGroup.weather.push(timeIndex);
+			});
+		}
+		document.getElementById("density-mult")?.addEventListener("input", (e) => {
+			if (!selectedVehicleGroup) return;			
+			
+			e.target.parentElement.children[0].textContent = e.target.value;
+			selectedVehicleGroup.densityMultiplier = e.target.value;
+		});
+		document.getElementById("vehicles-search")?.addEventListener("change", (e) => {
+			if (!selectedVehicleGroup) return;
+
+			const num = parseInt(e.target.value);
+			if (isNaN(num)) return;
+			if (selectedVehicleGroup.ids.includes(num)) return;
+			selectedVehicleGroup.ids.push(num);
+			updateVehiclesList(selectedVehicleGroup);
+		});
+		
+
+		async function traverseFileTree(item, path) {
+			path = path || "";
+			if (item.isFile) {
+				// Get file
+				item.file(function(file) {
+					// console.log(path, "File:", path + file.name, file);
+					if (file.name.toLowerCase() == "sanvivegrp.json") loadGrpAreas(path, file);
+					if (file.name.toLowerCase() == "vehicles.ide") addFileToIdList(path, file);
+					if (path.toLowerCase().startsWith("modloader/") && file.name.toLowerCase().endsWith(".txt")) addFileToIdList(path, file);
+				});
+				return new Promise((resolve, reject) => {resolve()});
+			} else if (item.isDirectory) {
+				// Get folder contents
+				var dirReader = item.createReader();
+				const enteriesReader = async () => {
+					await new Promise((resolve, reject) => {
+						dirReader.readEntries(async function(entries) {
+							let waitingList = [];
+
+							let isGameFolder = entries.find((x) => x.name.toLowerCase() == "vorbis.dll" && x.isFile) != null;
+							let itemName = item.name + "/";
+							if (isGameFolder) itemName = "";
+							// console.log(item, path, isGameFolder, initialPath, entries);
+
+							for (var i=0; i<entries.length; i++) {
+								let result = traverseFileTree(entries[i], path + itemName);
+								waitingList.push(result);
+							}
+							await Promise.all(waitingList);
+
+							//reads 100 more
+							if (entries.length >= 99) await enteriesReader();
+
+							resolve();
+						});
+					});
+				};
+				return enteriesReader();
+			}
+		}
+
+		function addFileToIdList(path, file) {
+			console.log("File:", file.name);
+			let newFileObj = {
+				name: file.name,
+				path,
+				size: file.size,
+				text: file.text(),
+			};
+			allFiles.push(newFileObj);
+
+			//newFileObj.text.then(x => newFileObj.text = x).then(updateFilesToIdList);
+		}
+		async function loadGrpAreas(path, file) {
+			console.log("GrpAreas File:", file.name);
+			let newFileObj = {
+				name: file.name,
+				path,
+				size: file.size,
+				text: file.text(),
+			};
+			allFiles.push(newFileObj);
+
+			await file.text().then(x => grpAreas = JSON.parse(x));
+		}
+		async function updateFilesToIdList() {
+			await Promise.all(
+				allFiles
+				//.filter(x => x.text instanceof Promise)
+				.map(x => x.text)
+			).then(promiseResults => {
+				allFiles.forEach((x,xi) => {
+					x.text = promiseResults[xi];
+				});
+			});
+			//if (allFiles.filter(x => x.text instanceof Promise).length > 0) return;
+			folderUpload.classList.remove("active");
+
+			window.grpAreas = grpAreas;
+			
+			updateAreaList();
+
+			console.log("DONE");
+		}
+
+		function updateAreaList() {
+			Array.from(areaListEl.children)
+			.filter(c => c.id == "")
+			.forEach(c => c.remove());
+
+			areaListEl.append(...grpAreas.map(grpArea => {
+				const grpAreaEl = document.createElement("div");
+
+				grpAreaEl.classList.add("grpArea");
+				grpAreaEl.textContent = `${grpArea.regions.join(", ")}`;
+				grpAreaEl.innerHTML += `<br>with ${parseInt(grpArea.vehicles.length)} vehicle groups`;
+
+				grpAreaEl.addEventListener("click", () => {
+					// open area menu
+					openAreaMenu(grpArea);
+				});
+				
+				grpAreaEl.addEventListener("contextmenu", (e) => {
+					e.preventDefault();
+
+					grpAreas.splice(grpAreas.indexOf(grpArea), 1);
+					updateAreaList();
+				});
+
+				return grpAreaEl;
+			}));
+		}
+
+		function openAreaMenu(grpArea) {
+			// close other menus
+			document.querySelectorAll("[data-page]")
+			.forEach(p => p.classList.remove("active"));
+			
+			// enable our page
+			document.querySelector(`[data-page="area"]`)?.classList.add("active");
+
+			selectedArea = grpArea;
+			updateAreaMenu(grpArea);
+		}
+
+		function updateAreaMenu(grpArea) {
+			const areaRegionsEl = document.getElementById("area-regions");
+			const areaVehsEl = document.getElementById("vehicle-groups");
+
+			areaRegionsEl.innerHTML = "";
+			areaRegionsEl.append(...grpArea.regions.map(region => {
+				const regionEl = document.createElement("li");
+
+				regionEl.textContent = region;
+
+				return regionEl;
+			}));
+			if (grpArea.regions.length == 0) {
+				areaRegionsEl.textContent = "press a region to add/remove.";
+			}
+			
+			areaVehsEl.innerHTML = "";
+			areaVehsEl.append(...grpArea.vehicles.map(vehicleGroup => {
+				const vehGroupEl = document.createElement("div");
+
+				vehGroupEl.classList.add("vehicle-group");
+				vehGroupEl.innerHTML = `
+				<b>time:</b> ${vehicleGroup.time.map(t => eTimeType[t]).join(", ") || "any"}<br>
+				<b>weekdays:</b> ${vehicleGroup.weekdays.map(w => eWeekdays[w]).join(", ") || "any"}<br>
+				<b>weather:</b> ${vehicleGroup.weather.map(w => eWeatherType[w]).join(", ") || "any"}<br>
+				<b>vehicles:</b> ${parseInt(vehicleGroup.ids.length)}<br>
+				<b>density:</b> ${parseFloat(vehicleGroup.densityMultiplier)}
+				`;
+
+				vehGroupEl.addEventListener("click", () => {
+					openVehicleGroupMenu(vehicleGroup);
+				});
+				
+				vehGroupEl.addEventListener("contextmenu", (e) => {
+					e.preventDefault();
+
+					grpArea.vehicles.splice(grpArea.vehicles.indexOf(vehicleGroup), 1);
+					updateAreaMenu(grpArea);
+				});
+
+				return vehGroupEl;
+			}));
+		}
+		
+		function openVehicleGroupMenu(vehicleGroup) {
+			// close other menus
+			document.querySelectorAll("[data-page]")
+			.forEach(p => p.classList.remove("active"));
+			
+			// enable our page
+			document.querySelector(`[data-page="vehicle-group"]`)?.classList.add("active");
+
+			selectedVehicleGroup = vehicleGroup;
+			for (let timeIndex = 0; timeIndex < eTimeType.length; timeIndex++) {
+				const timeType = eTimeType[timeIndex];
+				const timeTypeCheckbox = document.querySelector(`#is-${timeType.toLowerCase()}`);
+				if (!timeTypeCheckbox) throw Error("time type checkbox doesn't exist " + timeType);
+
+				timeTypeCheckbox.checked = vehicleGroup.time.includes(timeIndex);
+			}
+			for (let timeIndex = 0; timeIndex < eWeekdays.length; timeIndex++) {
+				const timeType = eWeekdays[timeIndex];
+				const timeTypeCheckbox = document.querySelector(`#is-${timeType.toLowerCase()}`);
+				if (!timeTypeCheckbox) throw Error("time type checkbox doesn't exist " + timeType);
+
+				timeTypeCheckbox.checked = vehicleGroup.weekdays.includes(timeIndex);
+			}
+			document.querySelector("#density-mult").parentElement.children[0].textContent = vehicleGroup.densityMultiplier;
+			document.querySelector("#density-mult").value = vehicleGroup.densityMultiplier;
+			updateVehiclesList(vehicleGroup);
+		}
+
+		function updateVehiclesList(vehicleGroup) {
+			document.querySelectorAll("#vehicles-list > *:not(input)").forEach(c => c.remove());
+			const vehiclesListEl = document.querySelector("#vehicles-list");
+			vehiclesListEl.append(...vehicleGroup.ids.map(id => {
+				const idEl = document.createElement("li");
+
+				idEl.textContent = id;
+
+				idEl.addEventListener("contextmenu", (e) => {
+					e.preventDefault();
+
+					vehicleGroup.ids.splice(vehicleGroup.ids.indexOf(id), 1);
+					updateVehiclesList(vehicleGroup);
+				});
+
+				return idEl;
+			}));
+		}
+
+		function removeDuplicates(arr) {
+			return arr.filter((item, index) => arr.indexOf(item) === index);
+		}
+
+
+
+
+
+		function makeTextFile(text, filename) {
+			var textFile = null;
+			var data = new Blob([text], {type: 'text/plain'});
+
+			textFile = window.URL.createObjectURL(data);
+
+			var link = document.createElement('a');
+			link.setAttribute('download', filename);
+			link.href = textFile;
+			document.body.appendChild(link);
+
+			window.requestAnimationFrame(function () {
+				var event = new MouseEvent('click');
+				link.dispatchEvent(event);
+				document.body.removeChild(link);
+
+				if(textFile !== null) {
+					window.URL.revokeObjectURL(textFile);
+				}
+			});
+		};
+	</script>
+</body>
+</html>
