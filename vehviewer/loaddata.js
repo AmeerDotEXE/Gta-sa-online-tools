@@ -38,6 +38,26 @@ function SelectModel(model)
 		} else LoadVehicleColour(fields);
 	}
 
+	let vehGameNameEl = document.getElementById('veh-game-name-viewer');
+	let vehNameEl = document.getElementById('veh-name-viewer');
+	let vehIdEl = document.getElementById('veh-id-viewer');
+	vehGameNameEl.textContent = CurrentModel.gameName;
+	vehNameEl.textContent = CurrentModel.name;
+	vehIdEl.textContent = CurrentModel.id;
+
+	vehGameNameEl.addEventListener("click", () => {
+		if (!CurrentModel) return;
+		copyContent(CurrentModel.gameName);
+	});
+	vehNameEl.addEventListener("click", () => {
+		if (!CurrentModel) return;
+		copyContent(CurrentModel.name);
+	});
+	vehIdEl.addEventListener("click", () => {
+		if (!CurrentModel) return;
+		copyContent(CurrentModel.id);
+	});
+
 	let colortable = document.getElementById('colors');
 	removeChildren(colortable);
 
