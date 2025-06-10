@@ -11,13 +11,15 @@ function SetCarColors(cols)
 		[ 0, 0, 0, 255 ],
 		[ 0, 0, 0, 255 ]
 	];
-	if(cols !== undefined)
+	if(cols !== undefined) {
 		for(let i = 0; i < cols.length; i++){
 			let col = VehicleColours[cols[i]];
+			if (col == null) continue;
 			carColors[i][0] = col[0];
 			carColors[i][1] = col[1];
 			carColors[i][2] = col[2];
 		}
+	}
 }
 
 function LoadColors(cols)
@@ -67,6 +69,9 @@ function SelectModel(model)
 		let c = CurrentModel.colors[i];
 		let c1 = VehicleColours[c[0]];
 		let c2 = VehicleColours[c[1]];
+		if (c1 == null) continue;
+		if (c2 == null) continue;
+
 		if(i == 0){
 			col1[0] = c1[0];
 			col1[1] = c1[1];
@@ -77,10 +82,12 @@ function SelectModel(model)
 		}
 		let tr = document.createElement('tr');
 		for(let j = 0; j < c.length; j++){
+			let col = VehicleColours[c[j]];
+			if (col == null) continue;
+
 			let td = document.createElement('td');
 			td.width = "16px";
 			td.height = "16px";
-			let col = VehicleColours[c[j]];
 			td.style = "background-color: rgb("+col[0]+","+col[1]+","+col[2]+")";
 			tr.appendChild(td);
 		}
