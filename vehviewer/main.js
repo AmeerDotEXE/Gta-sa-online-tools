@@ -284,13 +284,6 @@ function main()
 			now *= 0.001;  // convert to seconds
 			const deltaTime = now - then;
 			then = now;
-
-			// scale calc
-			const chassis = myclump.atomics.find(x => x.frame.name == "chassis");
-			if (chassis && chassis.geometry.morphTargets[0]?.vertices?.length > 0) {
-				const furhestX = chassis.geometry.morphTargets[0].vertices.reduce((a, c) => (c[0] > a ? c[0] : a), 0);
-				camDist = 5 * (0.75 + (furhestX / 4))
-			}
 	
 			if (camScroll) camYaw += 0.002;
 			allVehWheels.forEach((whel) => {
