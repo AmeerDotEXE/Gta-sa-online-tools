@@ -550,9 +550,16 @@
 			},
 			parked() {
 				vehiclesList.forEach(veh => {
-					veh.lines.cargrp = veh.lines.cargrp || [];
 					if (!parkedVehIds.includes(veh.id)) return;
+					veh.lines.cargrp = veh.lines.cargrp || [];
 					veh.lines.cargrp.push("Parked Car Maker");
+				});
+			},
+			sanviveGrp() {
+				vehiclesList.forEach(veh => {
+					if (!sanviveGrpIds.includes(veh.id)) return;
+					veh.lines.cargrp = veh.lines.cargrp || [];
+					veh.lines.cargrp.push("SanviveGrp");
 				});
 			},
 		};
@@ -571,6 +578,7 @@
 		let fxtFiles = [];
 		let fastman92AudioFile = null;
 		let cargrpFile = null;
+		let sanviveGrp = null;
 
 		let handlingTags = {};
 		let fxtTags = {};
@@ -579,6 +587,7 @@
 		let carmodsLines = {};
 		let cargrpLines = {};
 		let parkedVehIds = [];
+		let sanviveGrpIds = [];
 
 		/**
 		 * @type {{
@@ -811,6 +820,7 @@
 			// traffic file
 			if (file.name.toLowerCase() == "cargrp.dat") checkFileVehGrp(newFile);
 			if (file.name.toLowerCase() == "parked car maker.ini") checkFileVehParked(newFile);
+			if (file.name.toLowerCase() == "sanvivegrp.json") checkFileVehSanviveGrp(newFile);
 
 			// fxt file
 			if (file.name.toLowerCase().endsWith(".fxt")) checkFileFxt(newFile);
@@ -939,6 +949,9 @@
 
 				if (parkedVehIds.includes(vehicleId)) {
 					newVehicle.lines.cargrp.push("Parked Car Maker");
+				}
+				if (sanviveGrpIds.includes(vehicleId)) {
+					newVehicle.lines.cargrp.push("SanviveGrp");
 				}
 
 				vehiclesList.push(newVehicle);
@@ -1113,6 +1126,23 @@
 
 			//update vehicles tag
 			VehicleUpdate.parked();
+		}
+		async function checkFileVehSanviveGrp(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			try {
+				sanviveGrp = JSON.parse(fileObj.text);
+				sanviveGrpIds = sanviveGrp
+					.flatMap(x => x.vehicles)
+					.flatMap(x => x.ids)
+					.filter((x, i, a) => a.indexOf(x) == i) // unique only
+				;
+			} catch {
+				throw Error("sanviveGrp is corrupt");
+			}
+
+			//update vehicles tag
+			VehicleUpdate.sanviveGrp();
 		}
 		
 		
