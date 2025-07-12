@@ -548,6 +548,13 @@
 					}
 				});
 			},
+			parked() {
+				vehiclesList.forEach(veh => {
+					veh.lines.cargrp = veh.lines.cargrp || [];
+					if (!parkedVehIds.includes(veh.id)) return;
+					veh.lines.cargrp.push("Parked Car Maker");
+				});
+			},
 		};
 
 		/** @type {Vehicle[]} */
@@ -571,6 +578,7 @@
 		let carcolsLines = {};
 		let carmodsLines = {};
 		let cargrpLines = {};
+		let parkedVehIds = [];
 
 		/**
 		 * @type {{
@@ -800,8 +808,9 @@
 			// audio file
 			if (file.name == "gtasa_vehicleAudioSettings.cfg") checkFileVehAudio(newFile);
 			
-			// audio file
+			// traffic file
 			if (file.name.toLowerCase() == "cargrp.dat") checkFileVehGrp(newFile);
+			if (file.name.toLowerCase() == "parked car maker.ini") checkFileVehParked(newFile);
 
 			// fxt file
 			if (file.name.toLowerCase().endsWith(".fxt")) checkFileFxt(newFile);
@@ -927,6 +936,10 @@
 						warnings: [],
 					}
 				};
+
+				if (parkedVehIds.includes(vehicleId)) {
+					newVehicle.lines.cargrp.push("Parked Car Maker");
+				}
 
 				vehiclesList.push(newVehicle);
 			});
@@ -1086,6 +1099,20 @@
 
 			//update vehicles tag
 			VehicleUpdate.cargrp();
+		}
+		async function checkFileVehParked(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			fileObj.text.split("\n").forEach(line => {
+				let numNVeh = line.split("=");
+				if (numNVeh.length != 2) return;
+				if (isNaN(parseInt(numNVeh[0]))) return;
+
+				parkedVehIds.push(parseInt(numNVeh[1].split(" ")[0].split("\t")[0]));
+			});
+
+			//update vehicles tag
+			VehicleUpdate.parked();
 		}
 		
 		
