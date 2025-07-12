@@ -478,6 +478,7 @@
 		 * 		audio: string;
 		 * 		carmods: string;
 		 * 		carcols: string;
+		 * 		cargrp: string[];
 		 * };
 		 * filePaths: {
 		 * 		ide: string;
@@ -538,6 +539,15 @@
 					veh.lines.audio = audioLine;
 				});
 			},
+			cargrp() {
+				vehiclesList.filter(veh => veh.lines.cargrp == null).forEach(veh => {
+					veh.lines.cargrp = [];
+					for (let categoryName in cargrpLines) {
+						if (!cargrpLines[categoryName].includes(veh.name)) continue;
+						veh.lines.cargrp.push(categoryName);
+					}
+				});
+			},
 		};
 
 		/** @type {Vehicle[]} */
@@ -553,12 +563,14 @@
 		let carmodsFiles = [];
 		let fxtFiles = [];
 		let fastman92AudioFile = null;
+		let cargrpFile = null;
 
 		let handlingTags = {};
 		let fxtTags = {};
 		let vehicleAudio = {};
 		let carcolsLines = {};
 		let carmodsLines = {};
+		let cargrpLines = {};
 
 		/**
 		 * @type {{
@@ -787,6 +799,9 @@
 
 			// audio file
 			if (file.name == "gtasa_vehicleAudioSettings.cfg") checkFileVehAudio(newFile);
+			
+			// audio file
+			if (file.name.toLowerCase() == "cargrp.dat") checkFileVehGrp(newFile);
 
 			// fxt file
 			if (file.name.toLowerCase().endsWith(".fxt")) checkFileFxt(newFile);
@@ -898,6 +913,7 @@
 						audio: vehicleAudio[vehicleName],
 						carcols: carcolsLines[vehicleName]?.line,
 						carmods: carmodsLines[vehicleName]?.line,
+						cargrp: Object.keys(cargrpLines).filter(key => cargrpLines[key].includes(vehicleName))
 					},
 					filePaths: {
 						ide: fileObj.fullPath,
@@ -1044,6 +1060,33 @@
 			//update vehicles tag
 			VehicleUpdate.audio();
 		}
+		async function checkFileVehGrp(fileObj) {
+			await waitFileObjLoad(fileObj);
+
+			if (cargrpFile != null) {
+				console.error("there are 2 cargrp files:\n"+cargrpFile+"\n"+fileObj.fullPath);
+				return;
+			}
+			cargrpFile = fileObj.fullPath;
+
+			fileObj.text.split("\n").forEach(line => {
+				if (line.split("#").length < 2) return;
+
+				let vehiclesLine = line.split("#")[0].trim().split(",").filter(x => x).map(x => x.trim().toLowerCase());
+				if (vehiclesLine.length == 0) return;
+
+				let categoryName = line.split("#")[1].trim().replace("POPCYCLE_GROUP_", "");
+
+				if (cargrpLines[categoryName] == null) {
+					cargrpLines[categoryName] = [];
+				}
+
+				cargrpLines[categoryName] = cargrpLines[categoryName].concat(vehiclesLine);
+			});
+
+			//update vehicles tag
+			VehicleUpdate.cargrp();
+		}
 		
 		
 		function updateVehicleData() {
@@ -1118,6 +1161,7 @@
 					<th>name</th>
 					<th>game name</th>
 					<th>class</th>
+					<th>cargrp</th>
 					<th>Audio</th>
 					<th>Colors</th>
 					<th>Tuning</th>
@@ -1166,6 +1210,7 @@
 						<td copy="${idName}">${idName}</td>
 						<td class="${veh.gameName == null ? "missing" : ""}" title="${veh.fxtTag}\n${veh.filePaths.fxt}" copy="${veh.fxtTag}">${veh.gameName || veh.name.toUpperCase()}</td>
 						<td copy="${veh.vehicleClass}">${veh.vehicleClass}</td>
+						<td copy="${veh.lines.cargrp?.join("\n")}" class="center ${veh.lines.cargrp?.length > 0 ? "" : "missing"}" title="${veh.lines.cargrp?.join("\n")}">${veh.lines.cargrp?.length > 0 ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.audio}" class="center ${veh.lines.audio == null ? "missing" : ""}">${veh.lines.audio ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carcols}" class="center ${veh.lines.carcols == null ? "missing" : ""}" title="${veh.filePaths.carcols}\n${veh.lines.carcols}">${veh.lines.carcols ? iconsHTML.check : iconsHTML.cross}</td>
 						<td copy="${veh.lines.carmods}" class="center ${veh.lines.carmods == null ? "missing" : ""}" title="${veh.filePaths.carmods}\n${veh.lines.carmods}">${veh.lines.carmods ? iconsHTML.check : iconsHTML.cross}</td>
@@ -1279,6 +1324,7 @@
 			Vehicles without color: ${enabledVeh.filter(x => !x.lines.carcols).length} (includes uncolorable vehicles)
 			Vehicles without audio: ${enabledVeh.filter(x => !x.lines.audio).length}
 			Vehicles without handling: ${enabledVeh.filter(x => !x.lines.handling).length}
+			Vehicles in traffic: ${enabledVeh.filter(x => x.lines.cargrp?.length > 0).length}
 			Handling Count: ${Object.keys(handlingTags).length}
 			`.trim().replace(/\n/gm, "<br>");
 
